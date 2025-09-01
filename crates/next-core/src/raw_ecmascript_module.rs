@@ -88,8 +88,10 @@ impl RawEcmascriptModule {
 #[turbo_tasks::value_impl]
 impl Module for RawEcmascriptModule {
     #[turbo_tasks::function]
-    fn ident(&self) -> Vc<AssetIdent> {
-        self.source.ident().with_modifier(rcstr!("raw"))
+    async fn ident(&self) -> Result<Vc<AssetIdent>> {
+        let mut ident = self.source.ident().owned().await?;
+        ident.add_modifier(rcstr!("raw"));
+        Ok(AssetIdent::new(ident))
     }
 }
 
