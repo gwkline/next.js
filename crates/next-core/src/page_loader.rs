@@ -150,7 +150,7 @@ impl PageLoaderAsset {
             get_asset_path_from_pathname(&self.pathname, ".js")
         ))?);
         ident.add_modifier(rcstr!("page loader asset"));
-        Ok(AssetIdent::new(ident))
+        Ok(ident.cell())
     }
 }
 
@@ -165,7 +165,7 @@ impl OutputAsset for PageLoaderAsset {
             // `static/chunks/pages/page2.js`, so that the dev runtime can request it at a known
             // path.
             // https://github.com/vercel/next.js/blob/84873e00874e096e6c4951dcf070e8219ed414e5/packages/next/src/client/route-loader.ts#L256-L271
-            Ok(ident.path())
+            Ok(ident.path().await?.cell())
         } else {
             Ok(this
                 .chunking_context

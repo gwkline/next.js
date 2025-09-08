@@ -38,8 +38,8 @@ impl NextServerUtilityModule {
     }
 
     #[turbo_tasks::function]
-    pub fn server_path(&self) -> Vc<FileSystemPath> {
-        self.module.ident().path()
+    pub async fn server_path(&self) -> Result<Vc<FileSystemPath>> {
+        Ok(self.module.ident().path().await?.cell())
     }
 }
 
@@ -49,7 +49,7 @@ impl Module for NextServerUtilityModule {
     async fn ident(&self) -> Result<Vc<AssetIdent>> {
         let mut ident = self.module.ident().owned().await?;
         ident.add_modifier(rcstr!("Next.js server utility"));
-        Ok(AssetIdent::new(ident))
+        Ok(ident.cell())
     }
 
     #[turbo_tasks::function]

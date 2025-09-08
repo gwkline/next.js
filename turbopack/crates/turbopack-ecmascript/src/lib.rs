@@ -725,7 +725,7 @@ impl Module for EcmascriptModuleAsset {
         }
         ident.add_modifier(rcstr!("ecmascript"));
         ident.layer = Some(self.asset_context.into_trait_ref().await?.layer());
-        Ok(AssetIdent::new(ident))
+        Ok(ident.cell())
     }
 
     #[turbo_tasks::function]
@@ -784,10 +784,8 @@ impl EcmascriptChunkPlaceable for EcmascriptModuleAsset {
         side_effect_free_packages: Vc<Glob>,
     ) -> Result<Vc<bool>> {
         // Check package.json first, so that we can skip parsing the module if it's marked that way.
-        let pkg_side_effect_free = is_marked_as_side_effect_free(
-            self.ident().path().owned().await?,
-            side_effect_free_packages,
-        );
+        let pkg_side_effect_free =
+            is_marked_as_side_effect_free(self.ident().path().await?, side_effect_free_packages);
         Ok(if *pkg_side_effect_free.await? {
             pkg_side_effect_free
         } else {
@@ -833,8 +831,8 @@ impl EvaluatableAsset for EcmascriptModuleAsset {}
 #[turbo_tasks::value_impl]
 impl ResolveOrigin for EcmascriptModuleAsset {
     #[turbo_tasks::function]
-    fn origin_path(&self) -> Vc<FileSystemPath> {
-        self.source.ident().path()
+    async fn origin_path(&self) -> Result<Vc<FileSystemPath>> {
+        Ok(self.source.ident().path().await?.cell())
     }
 
     #[turbo_tasks::function]
@@ -1903,7 +1901,7 @@ async fn process_parse_result(
             Ok(match parse_result {
                 ParseResult::Ok { .. } => unreachable!(),
                 ParseResult::Unparsable { messages } => {
-                    let path = ident.path().to_string().await?;
+                    let path = ident.path().await?.value_to_string().await?;
                     let error_messages = messages
                         .as_ref()
                         .and_then(|m| m.first().map(|f| format!("\n{f}")))
@@ -1934,7 +1932,7 @@ async fn process_parse_result(
                     }
                 }
                 ParseResult::NotFound => {
-                    let path = ident.path().to_string().await?;
+                    let path = ident.path().await?.to_string();
                     let msg = format!("Could not parse module '{path}', file not found");
                     let body = vec![
                         quote!(

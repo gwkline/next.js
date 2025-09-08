@@ -45,7 +45,7 @@ impl Source for StructuredImageFileSource {
         let mut ident = self.image.ident().owned().await?;
         ident.add_modifier(modifier);
         ident.rename_as_ref("*.mjs").await?;
-        Ok(AssetIdent::new(ident))
+        Ok(ident.cell())
     }
 }
 

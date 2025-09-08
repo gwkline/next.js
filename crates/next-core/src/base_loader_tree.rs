@@ -1,7 +1,7 @@
 use anyhow::Result;
 use indoc::formatdoc;
 use turbo_rcstr::RcStr;
-use turbo_tasks::{FxIndexMap, ResolvedVc, ValueToString, Vc};
+use turbo_tasks::{FxIndexMap, ResolvedVc, Vc};
 use turbo_tasks_fs::FileSystemPath;
 use turbopack::{ModuleAssetContext, transition::Transition};
 use turbopack_core::{
@@ -115,7 +115,7 @@ impl BaseLoaderTreeBuilder {
         self.inner_assets
             .insert(format!("MODULE_{i}").into(), module);
 
-        let module_path = module.ident().path().to_string().await?;
+        let module_path = module.ident().path().await?.value_to_string().await?;
 
         Ok(format!(
             "[{identifier}, {path}]",

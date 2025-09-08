@@ -465,8 +465,8 @@ impl Issue for CssGlobalImportIssue {
 
     #[turbo_tasks::function]
     async fn description(&self) -> Result<Vc<OptionStyledString>> {
-        let parent_path = self.parent_module.ident().path().owned().await?;
-        let module_path = self.module.ident().path().owned().await?;
+        let parent_path = self.parent_module.ident().path().await?;
+        let module_path = self.module.ident().path().await?;
         let relative_import_location = parent_path.parent();
 
         let import_path = match relative_import_location.get_relative_path_to(&module_path) {
@@ -494,8 +494,8 @@ impl Issue for CssGlobalImportIssue {
     }
 
     #[turbo_tasks::function]
-    fn file_path(&self) -> Vc<FileSystemPath> {
-        self.parent_module.ident().path()
+    async fn file_path(&self) -> Result<Vc<FileSystemPath>> {
+        Ok(self.parent_module.ident().path().await?.cell())
     }
 
     #[turbo_tasks::function]

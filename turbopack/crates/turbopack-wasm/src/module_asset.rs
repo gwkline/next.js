@@ -126,7 +126,7 @@ impl Module for WebAssemblyModuleAsset {
         let mut ident = self.source.ident().owned().await?;
         ident.add_modifier(rcstr!("wasm module"));
         ident.layer = Some(self.asset_context.into_trait_ref().await?.layer());
-        Ok(AssetIdent::new(ident))
+        Ok(ident.cell())
     }
 
     #[turbo_tasks::function]
@@ -183,8 +183,8 @@ impl EcmascriptChunkPlaceable for WebAssemblyModuleAsset {
 #[turbo_tasks::value_impl]
 impl ResolveOrigin for WebAssemblyModuleAsset {
     #[turbo_tasks::function]
-    fn origin_path(&self) -> Vc<FileSystemPath> {
-        self.source.ident().path()
+    async fn origin_path(&self) -> Result<Vc<FileSystemPath>> {
+        Ok(self.source.ident().path().await?.cell())
     }
 
     #[turbo_tasks::function]

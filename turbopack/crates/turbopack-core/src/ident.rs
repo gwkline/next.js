@@ -5,9 +5,7 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use turbo_rcstr::RcStr;
-use turbo_tasks::{
-    NonLocalValue, ReadRef, ResolvedVc, TaskInput, ValueToString, Vc, trace::TraceRawVcs,
-};
+use turbo_tasks::{NonLocalValue, ResolvedVc, TaskInput, ValueToString, Vc, trace::TraceRawVcs};
 use turbo_tasks_fs::FileSystemPath;
 use turbo_tasks_hash::{DeterministicHash, Xxh3Hash64Hasher, encode_hex, hash_xxh3_hash64};
 
@@ -59,7 +57,7 @@ impl Layer {
     }
 }
 
-#[turbo_tasks::value]
+#[turbo_tasks::value(shared)]
 #[derive(Clone, Debug, Hash, TaskInput)]
 pub struct AssetIdent {
     /// The primary path of the asset
@@ -83,10 +81,6 @@ pub struct AssetIdent {
 }
 
 impl AssetIdent {
-    pub fn new(ident: AssetIdent) -> Vc<Self> {
-        AssetIdent::new_inner(ReadRef::new_owned(ident))
-    }
-
     pub fn add_modifier(&mut self, modifier: RcStr) {
         debug_assert!(!modifier.is_empty(), "modifiers cannot be empty.");
         self.modifiers.push(modifier);
@@ -114,28 +108,14 @@ impl AssetIdent {
             content_type: None,
         }
     }
+
+    pub async fn path(self: Vc<Self>) -> Result<FileSystemPath> {
+        Ok(self.await?.path.clone())
+    }
 }
 
 #[turbo_tasks::value_impl]
 impl AssetIdent {
-    #[turbo_tasks::function]
-    fn new_inner(ident: ReadRef<AssetIdent>) -> Vc<Self> {
-        debug_assert!(
-            ident.query.is_empty() || ident.query.starts_with("?"),
-            "query should be empty or start with a `?`"
-        );
-        debug_assert!(
-            ident.fragment.is_empty() || ident.fragment.starts_with("#"),
-            "query should be empty or start with a `?`"
-        );
-        ReadRef::cell(ident)
-    }
-
-    #[turbo_tasks::function]
-    pub fn path(&self) -> Vc<FileSystemPath> {
-        self.path.clone().cell()
-    }
-
     /// Computes a unique output asset name for the given asset identifier.
     /// TODO(alexkirsz) This is `turbopack-browser` specific, as
     /// `turbopack-nodejs` would use a content hash instead. But for now

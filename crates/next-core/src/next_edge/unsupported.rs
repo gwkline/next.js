@@ -76,7 +76,7 @@ fn unsupported_module_source(root_path: FileSystemPath, module: Pattern) -> Vc<V
             ident.add_modifier(
                 format!("unsupported edge import {}", module.describe_as_string()).into(),
             );
-            AssetIdent::new(ident)
+            ident
         },
         content,
     )

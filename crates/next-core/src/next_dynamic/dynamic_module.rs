@@ -48,7 +48,7 @@ impl Module for NextDynamicEntryModule {
     async fn ident(&self) -> Result<Vc<AssetIdent>> {
         let mut ident = self.module.ident().owned().await?;
         ident.add_modifier(rcstr!("next/dynamic entry"));
-        Ok(AssetIdent::new(ident))
+        Ok(ident.cell())
     }
 
     #[turbo_tasks::function]

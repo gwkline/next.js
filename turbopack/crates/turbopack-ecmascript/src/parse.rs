@@ -205,7 +205,7 @@ async fn parse_internal(
     loose_errors: bool,
 ) -> Result<Vc<ParseResult>> {
     let content = source.content();
-    let fs_path = source.ident().path().owned().await?;
+    let fs_path = source.ident().path().await?;
     let ident = &*source.ident().to_string().await?;
     let file_path_hash = hash_xxh3_hash64(&*source.ident().to_string().await?) as u128;
     let content = match content.await {
@@ -543,8 +543,8 @@ struct ReadSourceIssue {
 #[turbo_tasks::value_impl]
 impl Issue for ReadSourceIssue {
     #[turbo_tasks::function]
-    fn file_path(&self) -> Vc<FileSystemPath> {
-        self.source.file_path()
+    async fn file_path(&self) -> Result<Vc<FileSystemPath>> {
+        Ok(self.source.file_path().await?.cell())
     }
 
     #[turbo_tasks::function]

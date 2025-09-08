@@ -37,7 +37,7 @@ impl Module for NodeAddonModule {
     async fn ident(&self) -> Result<Vc<AssetIdent>> {
         let mut ident = self.source.ident().owned().await?;
         ident.add_modifier(rcstr!("node addon"));
-        Ok(AssetIdent::new(ident))
+        Ok(ident.cell())
     }
 
     #[turbo_tasks::function]

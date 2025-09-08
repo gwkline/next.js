@@ -155,7 +155,7 @@ impl CssChunk {
     async fn ident_for_path(&self) -> Result<Vc<AssetIdent>> {
         let CssChunkContent { chunk_items, .. } = &*self.content.await?;
         let mut common_path = if let Some(chunk_item) = chunk_items.first() {
-            let path = chunk_item.asset_ident().path().owned().await?;
+            let path = chunk_item.asset_ident().path().await?;
             Some((path.clone(), path))
         } else {
             None
@@ -203,7 +203,7 @@ impl CssChunk {
             content_type: None,
         };
 
-        Ok(AssetIdent::new(ident))
+        Ok(ident.cell())
     }
 }
 
@@ -243,9 +243,7 @@ pub struct CssChunkContent {
 impl Chunk for CssChunk {
     #[turbo_tasks::function]
     async fn ident(self: Vc<Self>) -> Result<Vc<AssetIdent>> {
-        Ok(AssetIdent::new(AssetIdent::from_path(
-            self.path().owned().await?,
-        )))
+        Ok(AssetIdent::from_path(self.path().owned().await?).cell())
     }
 
     #[turbo_tasks::function]

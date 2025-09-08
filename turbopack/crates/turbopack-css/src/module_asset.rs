@@ -67,7 +67,7 @@ impl Module for ModuleCssAsset {
         let mut ident = self.source.ident().owned().await?;
         ident.add_modifier(rcstr!("css module"));
         ident.layer = Some(self.asset_context.into_trait_ref().await?.layer());
-        Ok(AssetIdent::new(ident))
+        Ok(ident.cell())
     }
 
     #[turbo_tasks::function]
@@ -269,8 +269,8 @@ impl EcmascriptChunkPlaceable for ModuleCssAsset {
 #[turbo_tasks::value_impl]
 impl ResolveOrigin for ModuleCssAsset {
     #[turbo_tasks::function]
-    fn origin_path(&self) -> Vc<FileSystemPath> {
-        self.source.ident().path()
+    async fn origin_path(&self) -> Result<Vc<FileSystemPath>> {
+        Ok(self.source.ident().path().await?.cell())
     }
 
     #[turbo_tasks::function]
@@ -457,8 +457,8 @@ impl Issue for CssModuleComposesIssue {
     }
 
     #[turbo_tasks::function]
-    fn file_path(&self) -> Vc<FileSystemPath> {
-        self.source.file_path()
+    async fn file_path(&self) -> Result<Vc<FileSystemPath>> {
+        Ok(self.source.file_path().await?.cell())
     }
 
     #[turbo_tasks::function]

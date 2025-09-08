@@ -78,7 +78,7 @@ impl ManifestLoaderChunkItem {
     pub async fn asset_ident_for(module: Vc<Box<dyn ChunkableModule>>) -> Result<Vc<AssetIdent>> {
         let mut ident = module.ident().owned().await?;
         ident.add_modifier(modifier());
-        Ok(AssetIdent::new(ident))
+        Ok(ident.cell())
     }
 }
 
@@ -88,14 +88,14 @@ impl ChunkItem for ManifestLoaderChunkItem {
     async fn asset_ident(&self) -> Result<Vc<AssetIdent>> {
         let mut ident = self.manifest.module_ident().owned().await?;
         ident.add_modifier(modifier());
-        Ok(AssetIdent::new(ident))
+        Ok(ident.cell())
     }
 
     #[turbo_tasks::function]
     async fn content_ident(&self) -> Result<Vc<AssetIdent>> {
         let mut ident = self.manifest.content_ident().owned().await?;
         ident.add_modifier(modifier());
-        Ok(AssetIdent::new(ident))
+        Ok(ident.cell())
     }
 
     #[turbo_tasks::function]

@@ -835,14 +835,12 @@ impl SingleModuleGraph {
         }
 
         {
-            let modules =
-                self.modules
-                    .iter()
-                    .map(|(module, &index)| async move {
-                        Ok((module.ident().path().owned().await?, index))
-                    })
-                    .try_join()
-                    .await?;
+            let modules = self
+                .modules
+                .iter()
+                .map(|(module, &index)| async move { Ok((module.ident().path().await?, index)) })
+                .try_join()
+                .await?;
             // Reverse the graph so we can find paths to roots
             let reversed_graph = Reversed(&self.graph.0);
             for (path, module_idx) in modules {
@@ -935,7 +933,7 @@ impl ModuleGraphImportTracer {
             .await?
             .modules
             .iter()
-            .map(|(&module, _)| async move { Ok((module.ident().path().owned().await?, module)) })
+            .map(|(&module, _)| async move { Ok((module.ident().path().await?, module)) })
             .try_join()
             .await?;
         let mut map: FxHashMap<FileSystemPath, Vec<ResolvedVc<Box<dyn Module>>>> =
@@ -2125,7 +2123,7 @@ pub mod tests {
     impl Module for MockModule {
         #[turbo_tasks::function]
         fn ident(&self) -> Vc<AssetIdent> {
-            AssetIdent::new(AssetIdent::from_path(self.path.clone()))
+            AssetIdent::from_path(self.path.clone()).cell()
         }
 
         #[turbo_tasks::function]

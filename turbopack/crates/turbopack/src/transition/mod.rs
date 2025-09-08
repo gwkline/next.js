@@ -156,9 +156,9 @@ impl TransitionOptions {
         if self.transition_rules.is_empty() {
             return Ok(None);
         }
-        let path = &*source.ident().path().await?;
+        let path = source.ident().path().await?;
         for rule in &self.transition_rules {
-            if rule.matches(source, path, reference_type).await? {
+            if rule.matches(source, &path, reference_type).await? {
                 return Ok(Some(rule.transition()));
             }
         }

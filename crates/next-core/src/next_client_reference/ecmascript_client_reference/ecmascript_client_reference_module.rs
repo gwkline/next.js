@@ -193,7 +193,7 @@ impl Module for EcmascriptClientReferenceModule {
         let mut ident = self.server_ident.owned().await?;
         ident.add_modifier(rcstr!("client reference proxy"));
         ident.layer = Some(self.server_asset_context.into_trait_ref().await?.layer());
-        Ok(AssetIdent::new(ident))
+        Ok(ident.cell())
     }
 
     #[turbo_tasks::function]

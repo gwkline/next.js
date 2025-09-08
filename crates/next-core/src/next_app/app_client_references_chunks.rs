@@ -4,7 +4,6 @@ use turbo_rcstr::rcstr;
 use turbo_tasks::{FxIndexMap, ResolvedVc, TryFlatJoinIterExt, TryJoinIterExt, Vc};
 use turbopack_core::{
     chunk::{ChunkGroupResult, ChunkingContext, availability_info::AvailabilityInfo},
-    ident::AssetIdent,
     module::Module,
     module_graph::{ModuleGraph, chunk_group_info::ChunkGroup},
     output::{OutputAssets, OutputAssetsWithReferenced},
@@ -216,7 +215,7 @@ pub async fn get_app_client_references_chunks(
                             {
                                 let mut ident = (*base_ident).clone();
                                 ident.add_modifier(rcstr!("ssr modules"));
-                                AssetIdent::new(ident)
+                                ident.cell()
                             },
                             ChunkGroup::IsolatedMerged {
                                 parent: parent_chunk_group,
@@ -258,7 +257,7 @@ pub async fn get_app_client_references_chunks(
                         {
                             let mut ident = (*base_ident).clone();
                             ident.add_modifier(rcstr!("client modules"));
-                            AssetIdent::new(ident)
+                            ident.cell()
                         },
                         ChunkGroup::IsolatedMerged {
                             parent: parent_chunk_group,

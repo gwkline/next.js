@@ -66,8 +66,8 @@ impl Issue for AnalyzeIssue {
     }
 
     #[turbo_tasks::function]
-    fn file_path(&self) -> Vc<FileSystemPath> {
-        self.source_ident.path()
+    async fn file_path(&self) -> Result<Vc<FileSystemPath>> {
+        Ok(self.source_ident.path().await?.cell())
     }
 
     #[turbo_tasks::function]

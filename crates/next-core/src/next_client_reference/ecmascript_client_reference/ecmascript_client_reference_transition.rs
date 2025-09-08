@@ -4,7 +4,6 @@ use turbopack::{ModuleAssetContext, transition::Transition};
 use turbopack_core::{
     context::ProcessResult,
     file_source::FileSource,
-    ident::AssetIdent,
     reference_type::{EcmaScriptModulesReferenceSubType, EntryReferenceSubType, ReferenceType},
     source::Source,
 };
@@ -118,7 +117,7 @@ impl Transition for NextEcmascriptClientReferenceTransition {
                     Some(part) => {
                         let mut ident = (*ident).clone();
                         ident.parts.push(part);
-                        AssetIdent::new(ident)
+                        ident.cell()
                     }
                     None => source_ident,
                 },

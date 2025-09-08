@@ -108,7 +108,7 @@ impl ManifestAsyncModule {
                 .modifiers
                 .push(available_modules.hash().await?.to_string().into());
         }
-        Ok(AssetIdent::new(ident))
+        Ok(ident.cell())
     }
 }
 
@@ -122,7 +122,7 @@ impl Module for ManifestAsyncModule {
     async fn ident(&self) -> Result<Vc<AssetIdent>> {
         let mut ident = self.inner.ident().owned().await?;
         ident.add_modifier(manifest_chunk_reference_description());
-        Ok(AssetIdent::new(ident))
+        Ok(ident.cell())
     }
 
     #[turbo_tasks::function]

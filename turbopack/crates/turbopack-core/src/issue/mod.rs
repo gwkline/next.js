@@ -404,8 +404,8 @@ impl IssueSource {
     }
 
     /// Returns the file path for the source file.
-    pub fn file_path(&self) -> Vc<FileSystemPath> {
-        self.source.ident().path()
+    pub async fn file_path(&self) -> Result<FileSystemPath> {
+        self.source.ident().path().await
     }
 }
 

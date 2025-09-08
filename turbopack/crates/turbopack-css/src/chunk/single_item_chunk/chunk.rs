@@ -77,7 +77,7 @@ impl SingleItemCssChunk {
     pub(super) async fn ident_for_path(&self) -> Result<Vc<AssetIdent>> {
         let mut item = self.item.asset_ident().owned().await?;
         item.add_modifier(rcstr!("single item css chunk"));
-        Ok(AssetIdent::new(item))
+        Ok(item.cell())
     }
 }
 
@@ -86,9 +86,7 @@ impl Chunk for SingleItemCssChunk {
     #[turbo_tasks::function]
     async fn ident(self: Vc<Self>) -> Result<Vc<AssetIdent>> {
         let self_as_output_asset: Vc<Box<dyn OutputAsset>> = Vc::upcast(self);
-        Ok(AssetIdent::new(AssetIdent::from_path(
-            self_as_output_asset.path().owned().await?,
-        )))
+        Ok(AssetIdent::from_path(self_as_output_asset.path().owned().await?).cell())
     }
 
     #[turbo_tasks::function]

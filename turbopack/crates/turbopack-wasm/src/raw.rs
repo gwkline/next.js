@@ -56,7 +56,7 @@ impl Module for RawWebAssemblyModuleAsset {
         let mut ident = self.source.ident().owned().await?;
         ident.add_modifier(rcstr!("wasm raw"));
         ident.layer = Some(self.asset_context.into_trait_ref().await?.layer());
-        Ok(AssetIdent::new(ident))
+        Ok(ident.cell())
     }
 }
 

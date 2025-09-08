@@ -40,7 +40,7 @@ impl AsyncLoaderModule {
     pub async fn asset_ident_for(module: Vc<Box<dyn ChunkableModule>>) -> Result<Vc<AssetIdent>> {
         let mut ident = module.ident().owned().await?;
         ident.add_modifier(rcstr!("async loader"));
-        Ok(AssetIdent::new(ident))
+        Ok(ident.cell())
     }
 }
 

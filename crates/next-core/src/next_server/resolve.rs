@@ -355,7 +355,7 @@ impl AfterResolvePlugin for ExternalCjsModulesResolvePlugin {
                 )]);
             }
         }
-        let path = result.ident().path().owned().await?;
+        let path = result.ident().path().await?;
         let file_type = get_file_type(path.clone(), &path).await?;
 
         let external_type = match (file_type, is_esm) {
@@ -385,7 +385,7 @@ impl AfterResolvePlugin for ExternalCjsModulesResolvePlugin {
                     node_resolve_options,
                 );
                 let resolves_equal = if let Some(result) = *node_resolved.first_source().await? {
-                    let cjs_path = result.ident().path().owned().await?;
+                    let cjs_path = result.ident().path().await?;
                     cjs_path == path
                 } else {
                     false

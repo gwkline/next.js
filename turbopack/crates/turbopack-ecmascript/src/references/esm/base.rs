@@ -783,8 +783,8 @@ impl Issue for InvalidExport {
     }
 
     #[turbo_tasks::function]
-    fn file_path(&self) -> Vc<FileSystemPath> {
-        self.source.file_path()
+    async fn file_path(&self) -> Result<Vc<FileSystemPath>> {
+        Ok(self.source.file_path().await?.cell())
     }
 
     #[turbo_tasks::function]
@@ -878,8 +878,8 @@ impl Issue for CircularReExport {
     }
 
     #[turbo_tasks::function]
-    fn file_path(&self) -> Vc<FileSystemPath> {
-        self.module.ident().path()
+    async fn file_path(&self) -> Result<Vc<FileSystemPath>> {
+        Ok(self.module.ident().path().await?.cell())
     }
 
     #[turbo_tasks::function]

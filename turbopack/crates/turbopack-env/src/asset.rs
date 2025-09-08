@@ -34,9 +34,7 @@ impl ProcessEnvAsset {
 impl Source for ProcessEnvAsset {
     #[turbo_tasks::function]
     fn ident(&self) -> Result<Vc<AssetIdent>> {
-        Ok(AssetIdent::new(AssetIdent::from_path(
-            self.root.join(".env.js")?,
-        )))
+        Ok(AssetIdent::from_path(self.root.join(".env.js")?).cell())
     }
 }
 

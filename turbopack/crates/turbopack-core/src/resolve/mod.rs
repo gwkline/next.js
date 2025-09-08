@@ -1686,7 +1686,7 @@ async fn handle_after_resolve_plugins(
 
     for (key, primary) in result_value.primary.iter() {
         if let &ResolveResultItem::Source(source) = primary {
-            let path = source.ident().path().owned().await?;
+            let path = source.ident().path().await?;
             if let Some(new_result) = apply_plugins_to_path(
                 path.clone(),
                 lookup_path.clone(),

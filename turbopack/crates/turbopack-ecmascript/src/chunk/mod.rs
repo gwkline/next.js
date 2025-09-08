@@ -72,7 +72,7 @@ impl Chunk for EcmascriptChunk {
     async fn ident(&self) -> Result<Vc<AssetIdent>> {
         let chunk_items = &*self.content.included_chunk_items().await?;
         let mut common_path = if let Some(chunk_item) = chunk_items.first() {
-            let path = chunk_item.asset_ident().path().owned().await?;
+            let path = chunk_item.asset_ident().path().await?;
             Some(path)
         } else {
             None
@@ -119,7 +119,7 @@ impl Chunk for EcmascriptChunk {
             content_type: None,
         };
 
-        Ok(AssetIdent::new(ident))
+        Ok(ident.cell())
     }
 
     #[turbo_tasks::function]

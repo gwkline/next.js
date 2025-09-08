@@ -1,3 +1,4 @@
+use anyhow::Result;
 use turbo_tasks::Vc;
 use turbo_tasks_fs::FileSystemPath;
 use turbopack_core::issue::{
@@ -16,8 +17,8 @@ pub struct SpecifiedModuleTypeIssue {
 #[turbo_tasks::value_impl]
 impl Issue for SpecifiedModuleTypeIssue {
     #[turbo_tasks::function]
-    fn file_path(&self) -> Vc<FileSystemPath> {
-        self.source.file_path()
+    async fn file_path(&self) -> Result<Vc<FileSystemPath>> {
+        Ok(self.source.file_path().await?.cell())
     }
 
     #[turbo_tasks::function]

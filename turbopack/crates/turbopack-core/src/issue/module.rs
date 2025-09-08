@@ -45,8 +45,8 @@ impl Issue for ModuleIssue {
     }
 
     #[turbo_tasks::function]
-    fn file_path(&self) -> Vc<FileSystemPath> {
-        self.ident.path()
+    async fn file_path(&self) -> Result<Vc<FileSystemPath>> {
+        Ok(self.ident.path().await?.cell())
     }
 
     #[turbo_tasks::function]

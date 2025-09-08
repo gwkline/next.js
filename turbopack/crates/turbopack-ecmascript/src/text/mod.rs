@@ -33,7 +33,7 @@ impl Source for TextContentFileSource {
         ident.add_modifier(rcstr!("text content"));
         ident.rename_as_ref("*.mjs").await?;
 
-        Ok(AssetIdent::new(ident))
+        Ok(ident.cell())
     }
 }
 

@@ -41,7 +41,7 @@ impl Module for InlinedBytesJsModule {
     async fn ident(&self) -> Result<Vc<AssetIdent>> {
         let mut ident = self.source.ident().owned().await?;
         ident.add_modifier(rcstr!("static bytes in ecmascript"));
-        Ok(AssetIdent::new(ident))
+        Ok(ident.cell())
     }
 }
 

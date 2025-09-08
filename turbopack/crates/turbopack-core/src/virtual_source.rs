@@ -1,4 +1,3 @@
-use anyhow::Result;
 use turbo_tasks::{ResolvedVc, Vc};
 use turbo_tasks_fs::FileSystemPath;
 
@@ -14,25 +13,20 @@ pub struct VirtualSource {
     pub ident: ResolvedVc<AssetIdent>,
     pub content: ResolvedVc<AssetContent>,
 }
+impl VirtualSource {
+    pub fn new(path: FileSystemPath, content: Vc<AssetContent>) -> Vc<Self> {
+        VirtualSource::new_with_ident(AssetIdent::from_path(path), content)
+    }
+}
 
 #[turbo_tasks::value_impl]
 impl VirtualSource {
     #[turbo_tasks::function]
-    pub async fn new(path: FileSystemPath, content: ResolvedVc<AssetContent>) -> Result<Vc<Self>> {
-        Ok(Self::cell(VirtualSource {
-            ident: AssetIdent::new(AssetIdent::from_path(path))
-                .to_resolved()
-                .await?,
+    pub fn new_with_ident(ident: AssetIdent, content: ResolvedVc<AssetContent>) -> Vc<Self> {
+        Self::cell(VirtualSource {
+            ident: ident.resolved_cell(),
             content,
-        }))
-    }
-
-    #[turbo_tasks::function]
-    pub fn new_with_ident(
-        ident: ResolvedVc<AssetIdent>,
-        content: ResolvedVc<AssetContent>,
-    ) -> Vc<Self> {
-        Self::cell(VirtualSource { ident, content })
+        })
     }
 }
 

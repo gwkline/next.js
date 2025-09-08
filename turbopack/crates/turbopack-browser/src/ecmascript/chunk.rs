@@ -52,7 +52,7 @@ impl EcmascriptBrowserChunk {
     async fn ident_for_path(&self) -> Result<Vc<AssetIdent>> {
         let mut ident = self.chunk.ident().owned().await?;
         ident.add_modifier(rcstr!("ecmascript dev chunk"));
-        Ok(AssetIdent::new(ident))
+        Ok(ident.cell())
     }
 }
 

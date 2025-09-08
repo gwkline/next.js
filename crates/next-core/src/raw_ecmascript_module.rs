@@ -91,7 +91,7 @@ impl Module for RawEcmascriptModule {
     async fn ident(&self) -> Result<Vc<AssetIdent>> {
         let mut ident = self.source.ident().owned().await?;
         ident.add_modifier(rcstr!("raw"));
-        Ok(AssetIdent::new(ident))
+        Ok(ident.cell())
     }
 }
 
@@ -258,7 +258,7 @@ impl EcmascriptChunkItem for RawEcmascriptChunkItem {
             let source_map = if let Some((source_map, _)) = parse_source_map_comment(
                 source,
                 Either::Right(&content_str),
-                &*self.module.ident().path().await?,
+                &self.module.ident().path().await?,
             )
             .await?
             {

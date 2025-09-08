@@ -221,7 +221,7 @@ impl Module for CachedExternalModule {
         ident.layer = Some(Layer::new(rcstr!("external")));
         ident.add_modifier(self.request.clone());
         ident.add_modifier(self.external_type.to_string().into());
-        Ok(AssetIdent::new(ident))
+        Ok(ident.cell())
     }
 
     #[turbo_tasks::function]

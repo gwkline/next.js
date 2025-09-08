@@ -132,7 +132,7 @@ pub(crate) async fn build_server_actions_loader(
         {
             let mut ident = AssetIdent::from_path(path);
             ident.add_modifier(rcstr!("server actions loader"));
-            AssetIdent::new(ident)
+            ident
         },
         AssetContent::file(file.into()),
     );

@@ -132,7 +132,7 @@ impl Module for CssModuleAsset {
         if let Some(import_context) = self.import_context {
             ident.add_modifier(import_context.modifier().owned().await?)
         }
-        Ok(AssetIdent::new(ident))
+        Ok(ident.cell())
     }
 
     #[turbo_tasks::function]
@@ -189,8 +189,8 @@ impl CssChunkPlaceable for CssModuleAsset {}
 #[turbo_tasks::value_impl]
 impl ResolveOrigin for CssModuleAsset {
     #[turbo_tasks::function]
-    fn origin_path(&self) -> Vc<FileSystemPath> {
-        self.source.ident().path()
+    async fn origin_path(&self) -> Result<Vc<FileSystemPath>> {
+        Ok(self.source.ident().path().await?.cell())
     }
 
     #[turbo_tasks::function]

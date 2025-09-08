@@ -70,7 +70,7 @@ impl Module for SideEffectsModule {
             );
         }
 
-        Ok(AssetIdent::new(ident))
+        Ok(ident.cell())
     }
 
     #[turbo_tasks::function]

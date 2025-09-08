@@ -54,7 +54,7 @@ impl Module for WebpackModuleAsset {
     async fn ident(&self) -> Result<Vc<AssetIdent>> {
         let mut ident = self.source.ident().owned().await?;
         ident.add_modifier(rcstr!("webpack"));
-        Ok(AssetIdent::new(ident))
+        Ok(ident.cell())
     }
 
     #[turbo_tasks::function]

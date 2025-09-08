@@ -49,7 +49,7 @@ impl Module for StaticUrlJsModule {
     async fn ident(&self) -> Result<Vc<AssetIdent>> {
         let mut ident = self.source.ident().owned().await?;
         ident.add_modifier(rcstr!("static in ecmascript"));
-        Ok(AssetIdent::new(ident))
+        Ok(ident.cell())
     }
 }
 

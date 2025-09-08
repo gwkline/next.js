@@ -163,7 +163,7 @@ impl ChunkItem for AsyncLoaderChunkItem {
         ident
             .modifiers
             .push(self.chunks_data().hash().await?.to_string().into());
-        Ok(AssetIdent::new(ident))
+        Ok(ident.cell())
     }
 
     #[turbo_tasks::function]

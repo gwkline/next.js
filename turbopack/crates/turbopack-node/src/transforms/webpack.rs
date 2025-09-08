@@ -160,7 +160,7 @@ impl Source for WebpackLoadersProcessedAsset {
             if let Some(rename_as) = self.transform.await?.rename_as.as_deref() {
                 let mut ident = self.source.ident().owned().await?;
                 ident.rename_as_ref(rename_as).await?;
-                AssetIdent::new(ident)
+                ident.cell()
             } else {
                 self.source.ident()
             },
@@ -594,9 +594,7 @@ impl EvaluateContext for WebpackLoaderContext {
                 );
 
                 if let Some(source) = *resolved.first_source().await? {
-                    if let Some(path) = self
-                        .cwd
-                        .get_relative_path_to(&*source.ident().path().await?)
+                    if let Some(path) = self.cwd.get_relative_path_to(&source.ident().path().await?)
                     {
                         Ok(ResponseMessage::Resolve { path })
                     } else {
@@ -767,8 +765,8 @@ impl Issue for BuildDependencyIssue {
     }
 
     #[turbo_tasks::function]
-    fn file_path(&self) -> Vc<FileSystemPath> {
-        self.source.file_path()
+    async fn file_path(&self) -> Result<Vc<FileSystemPath>> {
+        Ok(self.source.file_path().await?.cell())
     }
 
     #[turbo_tasks::function]
@@ -807,8 +805,8 @@ pub struct EvaluateEmittedErrorIssue {
 #[turbo_tasks::value_impl]
 impl Issue for EvaluateEmittedErrorIssue {
     #[turbo_tasks::function]
-    fn file_path(&self) -> Vc<FileSystemPath> {
-        self.source.file_path()
+    async fn file_path(&self) -> Result<Vc<FileSystemPath>> {
+        Ok(self.source.file_path().await?.cell())
     }
 
     #[turbo_tasks::function]
@@ -863,8 +861,8 @@ pub struct EvaluateErrorLoggingIssue {
 #[turbo_tasks::value_impl]
 impl Issue for EvaluateErrorLoggingIssue {
     #[turbo_tasks::function]
-    fn file_path(&self) -> Vc<FileSystemPath> {
-        self.source.file_path()
+    async fn file_path(&self) -> Result<Vc<FileSystemPath>> {
+        Ok(self.source.file_path().await?.cell())
     }
 
     #[turbo_tasks::function]

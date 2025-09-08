@@ -405,7 +405,7 @@ impl Module for RequireContextAsset {
         ident
             .modifiers
             .push(modifier(&self.dir, self.include_subdirs));
-        Ok(AssetIdent::new(ident))
+        Ok(ident.cell())
     }
 
     #[turbo_tasks::function]

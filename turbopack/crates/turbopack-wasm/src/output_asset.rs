@@ -5,7 +5,6 @@ use turbo_tasks_fs::FileSystemPath;
 use turbopack_core::{
     asset::{Asset, AssetContent},
     chunk::ChunkingContext,
-    ident::AssetIdent,
     output::OutputAsset,
     source::Source,
 };
@@ -43,7 +42,7 @@ impl OutputAsset for WebAssemblyAsset {
         ident.add_modifier(rcstr!("wasm"));
         Ok(this.chunking_context.chunk_path(
             Some(Vc::upcast(self)),
-            AssetIdent::new(ident),
+            ident.cell(),
             None,
             rcstr!(".wasm"),
         ))

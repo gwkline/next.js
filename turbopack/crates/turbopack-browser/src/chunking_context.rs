@@ -634,7 +634,7 @@ impl ChunkingContext for BrowserChunkingContext {
                 let other_assets = Vc::cell(assets.clone());
                 assets.push(
                     self.generate_chunk_list_register_chunk(
-                        AssetIdent::new(ident),
+                        ident.cell(),
                         EvaluatableAssets::empty(),
                         other_assets,
                         EcmascriptDevChunkListSource::Dynamic,
@@ -714,7 +714,7 @@ impl ChunkingContext for BrowserChunkingContext {
                 }
                 assets.push(
                     self.generate_chunk_list_register_chunk(
-                        AssetIdent::new(ident),
+                        ident.cell(),
                         entries,
                         other_assets,
                         EcmascriptDevChunkListSource::Entry,

@@ -54,7 +54,7 @@ impl Source for FileSource {
         if !self.fragment.is_empty() {
             ident.fragment = self.fragment.clone();
         }
-        AssetIdent::new(ident)
+        ident.cell()
     }
 }
 
