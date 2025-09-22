@@ -289,6 +289,36 @@ export function createPatchedFetcher(
       cacheSignal.beginRead()
     }
 
+    const isStagedRenderingInDev = !!(
+      process.env.NODE_ENV === 'development' &&
+      workUnitStore &&
+      // eslint-disable-next-line no-restricted-syntax
+      workUnitStore.type === 'request' &&
+      // TODO: there's probably a cleaner way to detect this.
+      (workUnitStore.prerenderResumeDataCache ||
+        workUnitStore.renderResumeDataCache)
+    )
+
+    const isFillingCachesInDev = !!(
+      isStagedRenderingInDev && workUnitStore.cacheSignal
+    )
+
+    const dynamicInDevStagedRendering = async () => {
+      if (isFillingCachesInDev) {
+        // TODO(restart-on-cache-miss): block dynamic more effectively.
+        // Ideally, we'd hang here -- if the render acts as a warmup, there's no need to execute dynamic requests.
+        // But we can *only* hang if the render ends up being a warmup and gets discarded --
+        // if it's used as is, we have to resolve the fetch eventually.
+        // This coordination mechanism will be implemented in a follow-up,
+        // for now it's enough to delay.
+        await getTimeoutBoundary()
+        await getTimeoutBoundary()
+      } else if (isStagedRenderingInDev) {
+        // don't block, but delay
+        await getTimeoutBoundary()
+      }
+    }
+
     const result = getTracer().trace(
       isInternal ? NextNodeServerSpan.internalFetch : AppRenderSpan.fetch,
       {
@@ -556,6 +586,18 @@ export function createPatchedFetcher(
             case 'prerender-ppr':
             case 'prerender-legacy':
             case 'request':
+              if (
+                process.env.NODE_ENV === 'development' &&
+                isStagedRenderingInDev
+              ) {
+                if (cacheSignal) {
+                  cacheSignal.endRead()
+                  cacheSignal = null
+                }
+                // TODO(restart-on-cache-miss): block dynamic when filling caches
+                await dynamicInDevStagedRendering()
+              }
+              break
             case 'cache':
             case 'private-cache':
             case 'unstable-cache':
@@ -666,9 +708,21 @@ export function createPatchedFetcher(
                     workStore.route,
                     'fetch()'
                   )
+                case 'request':
+                  if (
+                    process.env.NODE_ENV === 'development' &&
+                    isStagedRenderingInDev
+                  ) {
+                    if (cacheSignal) {
+                      cacheSignal.endRead()
+                      cacheSignal = null
+                    }
+                    // TODO(restart-on-cache-miss): block dynamic when filling caches
+                    await dynamicInDevStagedRendering()
+                  }
+                  break
                 case 'prerender-ppr':
                 case 'prerender-legacy':
-                case 'request':
                 case 'cache':
                 case 'private-cache':
                 case 'unstable-cache':
@@ -840,9 +894,23 @@ export function createPatchedFetcher(
                       normalizedRevalidate,
                       handleUnlock
                     )
+                  case 'request':
+                    if (
+                      process.env.NODE_ENV === 'development' &&
+                      isFillingCachesInDev
+                    ) {
+                      return createCachedPrerenderResponse(
+                        res,
+                        cacheKey,
+                        incrementalCacheConfig,
+                        incrementalCache,
+                        normalizedRevalidate,
+                        handleUnlock
+                      )
+                    }
+                  // fallthrough
                   case 'prerender-ppr':
                   case 'prerender-legacy':
-                  case 'request':
                   case 'cache':
                   case 'private-cache':
                   case 'unstable-cache':
@@ -912,9 +980,16 @@ export function createPatchedFetcher(
                   // here.
                   await getTimeoutBoundary()
                   break
+                case 'request':
+                  if (
+                    process.env.NODE_ENV === 'development' &&
+                    isStagedRenderingInDev
+                  ) {
+                    await dynamicInDevStagedRendering()
+                  }
+                  break
                 case 'prerender-ppr':
                 case 'prerender-legacy':
-                case 'request':
                 case 'cache':
                 case 'private-cache':
                 case 'unstable-cache':
@@ -928,6 +1003,7 @@ export function createPatchedFetcher(
               await handleUnlock()
             } else {
               // in dev, incremental cache response will be null in case the browser adds `cache-control: no-cache` in the request headers
+              // TODO: it seems like we also hit this after revalidates in dev?
               cacheReasonOverride = 'cache-control: no-cache (hard refresh)'
             }
 
@@ -994,7 +1070,11 @@ export function createPatchedFetcher(
           }
         }
 
-        if (workStore.isStaticGeneration && init && typeof init === 'object') {
+        if (
+          (workStore.isStaticGeneration || isStagedRenderingInDev) &&
+          init &&
+          typeof init === 'object'
+        ) {
           const { cache } = init
 
           // Delete `cache` property as Cloudflare Workers will throw an error
@@ -1016,9 +1096,21 @@ export function createPatchedFetcher(
                     workStore.route,
                     'fetch()'
                   )
+                case 'request':
+                  if (
+                    process.env.NODE_ENV === 'development' &&
+                    isStagedRenderingInDev
+                  ) {
+                    if (cacheSignal) {
+                      cacheSignal.endRead()
+                      cacheSignal = null
+                    }
+                    // TODO(restart-on-cache-miss): block dynamic when filling caches
+                    await dynamicInDevStagedRendering()
+                  }
+                  break
                 case 'prerender-ppr':
                 case 'prerender-legacy':
-                case 'request':
                 case 'cache':
                 case 'private-cache':
                 case 'unstable-cache':
@@ -1054,6 +1146,14 @@ export function createPatchedFetcher(
                       'fetch()'
                     )
                   case 'request':
+                    if (
+                      process.env.NODE_ENV === 'development' &&
+                      isStagedRenderingInDev
+                    ) {
+                      // TODO(restart-on-cache-miss): block dynamic when filling caches
+                      await dynamicInDevStagedRendering()
+                    }
+                    break
                   case 'cache':
                   case 'private-cache':
                   case 'unstable-cache':
