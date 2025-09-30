@@ -471,6 +471,7 @@ export const configSchema: zod.ZodType<NextConfig> = z.lazy(() =>
             }),
           ])
           .optional(),
+        lockDistDir: z.boolean().optional(),
       })
       .optional(),
     exportPathMap: z
