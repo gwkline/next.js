@@ -852,5 +852,7 @@
   "851": "Pass either `webpack` or `turbopack`, not both.",
   "852": "Only custom servers can pass `webpack`, `turbo`, or `turbopack`.",
   "853": "Turbopack build failed",
-  "854": "Expected a %s request header."
+  "854": "Expected a %s request header.",
+  "855": "No reference found for param: %s in reference: %s",
+  "856": "No reference found for segment: %s with reference: %s"
 }
