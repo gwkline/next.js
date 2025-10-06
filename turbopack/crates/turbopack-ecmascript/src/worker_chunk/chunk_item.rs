@@ -39,7 +39,7 @@ impl WorkerLoaderChunkItem {
         Ok(self.chunking_context.evaluated_chunk_group_assets(
             {
                 let mut ident = module.inner.ident().owned().await?;
-                ident.modifiers.push(rcstr!("worker"));
+                ident.add_modifier(rcstr!("worker"));
                 ident
             },
             ChunkGroup::Isolated(ResolvedVc::upcast(module.inner)),

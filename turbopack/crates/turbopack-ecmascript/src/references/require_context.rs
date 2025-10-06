@@ -402,9 +402,7 @@ impl Module for RequireContextAsset {
     #[turbo_tasks::function]
     async fn ident(&self) -> Result<Vc<AssetIdent>> {
         let mut ident = self.source.ident().owned().await?;
-        ident
-            .modifiers
-            .push(modifier(&self.dir, self.include_subdirs));
+        ident.add_modifier(modifier(&self.dir, self.include_subdirs));
         Ok(ident.cell())
     }
 

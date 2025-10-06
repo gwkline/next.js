@@ -204,10 +204,10 @@ impl EcmascriptBrowserEvaluateChunk {
     async fn ident_for_path(&self) -> Result<Vc<AssetIdent>> {
         let mut ident = self.ident.clone();
 
-        ident.add_modifier(rcstr!("ecmascript browser evaluate chunk"));
+        let mut modifiers = vec![rcstr!("ecmascript browser evaluate chunk")];
 
         let evaluatable_assets = self.evaluatable_assets.await?;
-        ident.modifiers.extend(
+        modifiers.extend(
             evaluatable_assets
                 .iter()
                 .map(async |entry| entry.ident().await?.value_to_string().owned().await)
@@ -215,7 +215,7 @@ impl EcmascriptBrowserEvaluateChunk {
                 .await?,
         );
 
-        ident.modifiers.extend(
+        modifiers.extend(
             self.other_chunks
                 .await?
                 .iter()
@@ -223,6 +223,8 @@ impl EcmascriptBrowserEvaluateChunk {
                 .try_join()
                 .await?,
         );
+
+        ident.add_modifiers(modifiers);
 
         Ok(ident.cell())
     }

@@ -81,8 +81,8 @@ pub struct AssetIdent {
     /// The assets that are nested in this asset
     /// Formatted as a sequence of `key => asset` pairs
     pub assets: RcStr,
-    /// The modifiers of this asset (e.g. `client chunks`)
-    pub modifiers: Vec<RcStr>,
+    /// The modifiers of this asset (e.g. `client chunks`) as a comma separated list
+    pub modifiers: RcStr,
     /// The parts of the asset that are (ECMAScript) modules
     pub parts: Vec<ModulePart>,
     /// The asset layer the asset was created from.
@@ -93,8 +93,26 @@ pub struct AssetIdent {
 
 impl AssetIdent {
     pub fn add_modifier(&mut self, modifier: RcStr) {
-        debug_assert!(!modifier.is_empty(), "modifiers cannot be empty.");
-        self.modifiers.push(modifier);
+        if self.modifiers.is_empty() {
+            debug_assert!(!modifier.is_empty(), "modifiers cannot be empty.");
+            debug_assert!(!modifier.contains(","), "modifiers cannot contain commas.");
+            self.modifiers = modifier;
+            return;
+        }
+        self.add_modifiers(std::iter::once(modifier));
+    }
+
+    pub fn add_modifiers(&mut self, new_modifiers: impl IntoIterator<Item = RcStr>) {
+        let mut modifiers = take(&mut self.modifiers).into_owned();
+        for modifier in new_modifiers {
+            debug_assert!(!modifier.is_empty(), "modifiers cannot be empty.");
+            debug_assert!(!modifier.contains(","), "modifiers cannot contain commas.");
+            if !modifiers.is_empty() {
+                modifiers.push_str(", ");
+            }
+            modifiers.push_str(&modifier);
+        }
+        self.modifiers = RcStr::from(modifiers);
     }
 
     pub async fn add_asset(&mut self, key: RcStr, asset: &AssetIdent) -> Result<()> {
@@ -142,7 +160,7 @@ impl AssetIdent {
             query: RcStr::default(),
             fragment: RcStr::default(),
             assets: RcStr::default(),
-            modifiers: Vec::new(),
+            modifiers: RcStr::default(),
             parts: Vec::new(),
             layer: None,
             content_type: None,
@@ -224,15 +242,18 @@ impl AssetIdent {
             assets.deterministic_hash(&mut hasher);
             has_hash = true;
         }
-        for modifier in modifiers.iter() {
-            if let Some(default_modifier) = default_modifier
-                && *modifier == default_modifier
-            {
-                continue;
+        if !self.modifiers.is_empty() {
+            // TODO: document why it is important to strip the default modifier from the hash
+            for modifier in modifiers.split(", ") {
+                if let Some(default_modifier) = default_modifier
+                    && modifier == default_modifier
+                {
+                    continue;
+                }
+                3_u8.deterministic_hash(&mut hasher);
+                modifier.deterministic_hash(&mut hasher);
+                has_hash = true;
             }
-            3_u8.deterministic_hash(&mut hasher);
-            modifier.deterministic_hash(&mut hasher);
-            has_hash = true;
         }
         for part in parts.iter() {
             4_u8.deterministic_hash(&mut hasher);
@@ -345,20 +366,14 @@ async fn value_to_string(ident: AssetIdent) -> Result<Vc<RcStr>> {
     }
 
     if let Some(layer) = &ident.layer {
-        write!(s, " [{}]", layer.name)?;
+        s.push_str(" [");
+        s.push_str(&layer.name);
+        s.push(']');
     }
 
     if !ident.modifiers.is_empty() {
         s.push_str(" (");
-
-        for (i, modifier) in ident.modifiers.iter().enumerate() {
-            if i > 0 {
-                s.push_str(", ");
-            }
-
-            s.push_str(modifier);
-        }
-
+        s.push_str(&ident.modifiers);
         s.push(')');
     }
 

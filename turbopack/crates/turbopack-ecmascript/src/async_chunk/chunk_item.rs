@@ -160,9 +160,7 @@ impl ChunkItem for AsyncLoaderChunkItem {
     #[turbo_tasks::function]
     async fn content_ident(self: Vc<Self>) -> Result<Vc<AssetIdent>> {
         let mut ident = self.module().ident().owned().await?;
-        ident
-            .modifiers
-            .push(self.chunks_data().hash().await?.to_string().into());
+        ident.add_modifier(self.chunks_data().hash().await?.to_string().into());
         Ok(ident.cell())
     }
 

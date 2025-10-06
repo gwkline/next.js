@@ -102,7 +102,7 @@ impl Chunk for EcmascriptChunk {
             query: RcStr::default(),
             fragment: RcStr::default(),
             assets: RcStr::default(),
-            modifiers: Vec::new(),
+            modifiers: RcStr::default(),
             parts: Vec::new(),
             layer: None,
             content_type: None,

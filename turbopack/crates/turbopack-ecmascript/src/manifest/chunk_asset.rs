@@ -104,9 +104,7 @@ impl ManifestAsyncModule {
     pub async fn content_ident(&self) -> Result<Vc<AssetIdent>> {
         let mut ident = self.inner.ident().owned().await?;
         if let Some(available_modules) = self.availability_info.available_modules() {
-            ident
-                .modifiers
-                .push(available_modules.hash().await?.to_string().into());
+            ident.add_modifier(available_modules.hash().await?.to_string().into());
         }
         Ok(ident.cell())
     }
