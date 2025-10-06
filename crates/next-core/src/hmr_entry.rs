@@ -57,7 +57,7 @@ impl Module for HmrEntryModule {
     #[turbo_tasks::function]
     async fn ident(&self) -> Result<Vc<AssetIdent>> {
         let mut ident = hmr_entry_point_base_ident().owned().await?;
-        ident.add_asset(rcstr!("ENTRY"), self.ident.clone().resolved_cell());
+        ident.add_asset(rcstr!("ENTRY"), &self.ident).await?;
         Ok(ident.cell())
     }
 

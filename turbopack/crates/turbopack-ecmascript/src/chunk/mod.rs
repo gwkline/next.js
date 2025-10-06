@@ -10,7 +10,7 @@ use std::fmt::Write;
 
 use anyhow::Result;
 use turbo_rcstr::{RcStr, rcstr};
-use turbo_tasks::{ResolvedVc, TryFlatJoinIterExt, TryJoinIterExt, ValueToString, Vc};
+use turbo_tasks::{ResolvedVc, TryFlatJoinIterExt, ValueToString, Vc};
 use turbo_tasks_fs::FileSystem;
 use turbopack_core::{
     chunk::{Chunk, ChunkItem, ChunkItems, ChunkingContext, ModuleIds},
@@ -93,18 +93,7 @@ impl Chunk for EcmascriptChunk {
             }
         }
 
-        let assets = chunk_items
-            .iter()
-            .map(|&chunk_item| async move {
-                Ok((
-                    rcstr!("chunk item"),
-                    chunk_item.content_ident().to_resolved().await?,
-                ))
-            })
-            .try_join()
-            .await?;
-
-        let ident = AssetIdent {
+        let mut ident = AssetIdent {
             path: if let Some(common_path) = common_path {
                 common_path
             } else {
@@ -112,12 +101,20 @@ impl Chunk for EcmascriptChunk {
             },
             query: RcStr::default(),
             fragment: RcStr::default(),
-            assets,
+            assets: RcStr::default(),
             modifiers: Vec::new(),
             parts: Vec::new(),
             layer: None,
             content_type: None,
         };
+        ident
+            .add_assets(
+                chunk_items
+                    .iter()
+                    .map(|&chunk_item| (rcstr!("chunk item"), chunk_item.content_ident()))
+                    .collect::<Vec<_>>(),
+            )
+            .await?;
 
         Ok(ident.cell())
     }

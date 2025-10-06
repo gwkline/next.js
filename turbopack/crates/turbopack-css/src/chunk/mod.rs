@@ -177,18 +177,8 @@ impl CssChunk {
                 }
             }
         }
-        let assets = chunk_items
-            .iter()
-            .map(|chunk_item| async move {
-                Ok((
-                    rcstr!("chunk item"),
-                    chunk_item.content_ident().to_resolved().await?,
-                ))
-            })
-            .try_join()
-            .await?;
 
-        let ident = AssetIdent {
+        let mut ident = AssetIdent {
             path: if let Some((common_path, _)) = common_path {
                 common_path
             } else {
@@ -196,12 +186,20 @@ impl CssChunk {
             },
             query: RcStr::default(),
             fragment: RcStr::default(),
-            assets,
+            assets: RcStr::default(),
             modifiers: Vec::new(),
             parts: Vec::new(),
             layer: None,
             content_type: None,
         };
+        ident
+            .add_assets(
+                chunk_items
+                    .iter()
+                    .map(|chunk_item| (rcstr!("chunk item"), chunk_item.content_ident()))
+                    .collect::<Vec<_>>(),
+            )
+            .await?;
 
         Ok(ident.cell())
     }

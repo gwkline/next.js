@@ -56,19 +56,22 @@ impl Module for SideEffectsModule {
         let mut ident = self.module.ident().owned().await?;
         ident.parts.push(self.part.clone());
 
-        ident.add_asset(
-            rcstr!("resolved"),
-            self.resolved_as.ident().to_resolved().await?,
-        );
-
         ident.add_modifier(rcstr!("side effects"));
 
-        for (i, side_effect) in self.side_effects.iter().enumerate() {
-            ident.add_asset(
-                RcStr::from(format!("side effect {i}")),
-                side_effect.ident().to_resolved().await?,
-            );
-        }
+        ident
+            .add_assets(
+                std::iter::once((rcstr!("resolved"), self.resolved_as.ident()))
+                    .chain(
+                        self.side_effects
+                            .iter()
+                            .enumerate()
+                            .map(|(i, side_effect)| {
+                                (RcStr::from(format!("side effect {i}")), side_effect.ident())
+                            }),
+                    )
+                    .collect::<Vec<_>>(),
+            )
+            .await?;
 
         Ok(ident.cell())
     }

@@ -1,11 +1,11 @@
-use std::fmt::Write;
+use std::{fmt::Write, mem::take};
 
 use anyhow::Result;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use turbo_rcstr::RcStr;
-use turbo_tasks::{NonLocalValue, ResolvedVc, TaskInput, Vc, trace::TraceRawVcs};
+use turbo_tasks::{NonLocalValue, TaskInput, Vc, trace::TraceRawVcs};
 use turbo_tasks_fs::FileSystemPath;
 use turbo_tasks_hash::{DeterministicHash, Xxh3Hash64Hasher, encode_hex, hash_xxh3_hash64};
 
@@ -79,7 +79,8 @@ pub struct AssetIdent {
     /// with a `#` (e.g. `#foo`)
     pub fragment: RcStr,
     /// The assets that are nested in this asset
-    pub assets: Vec<(RcStr, ResolvedVc<AssetIdent>)>,
+    /// Formatted as a sequence of `key => asset` pairs
+    pub assets: RcStr,
     /// The modifiers of this asset (e.g. `client chunks`)
     pub modifiers: Vec<RcStr>,
     /// The parts of the asset that are (ECMAScript) modules
@@ -96,8 +97,37 @@ impl AssetIdent {
         self.modifiers.push(modifier);
     }
 
-    pub fn add_asset(&mut self, key: RcStr, asset: ResolvedVc<AssetIdent>) {
-        self.assets.push((key, asset));
+    pub async fn add_asset(&mut self, key: RcStr, asset: &AssetIdent) -> Result<()> {
+        let mut assets = take(&mut self.assets).into_owned();
+        if !assets.is_empty() {
+            assets.push_str(", ");
+        }
+        write!(
+            assets,
+            " {key} => {asset}",
+            asset = asset.value_to_string().await?
+        )
+        .expect("failed to write to assets");
+
+        self.assets = RcStr::from(assets);
+        Ok(())
+    }
+    pub async fn add_assets(&mut self, items: Vec<(RcStr, Vc<AssetIdent>)>) -> Result<()> {
+        debug_assert!(!items.is_empty(), "assets cannot be empty.");
+        let mut assets = take(&mut self.assets).into_owned();
+        for (key, asset) in items {
+            if !assets.is_empty() {
+                assets.push_str(", ");
+            }
+            write!(
+                assets,
+                " {key} => {asset}",
+                asset = asset.await?.value_to_string().await?
+            )
+            .expect("failed to write to assets");
+        }
+        self.assets = RcStr::from(assets);
+        Ok(())
     }
 
     pub async fn rename_as_ref(&mut self, pattern: &str) -> Result<()> {
@@ -111,7 +141,7 @@ impl AssetIdent {
             path,
             query: RcStr::default(),
             fragment: RcStr::default(),
-            assets: Vec::new(),
+            assets: RcStr::default(),
             modifiers: Vec::new(),
             parts: Vec::new(),
             layer: None,
@@ -189,14 +219,9 @@ impl AssetIdent {
             fragment.deterministic_hash(&mut hasher);
             has_hash = true;
         }
-        for (key, ident) in assets.iter() {
+        if !self.assets.is_empty() {
             2_u8.deterministic_hash(&mut hasher);
-            key.deterministic_hash(&mut hasher);
-            ident
-                .await?
-                .value_to_string()
-                .await?
-                .deterministic_hash(&mut hasher);
+            assets.deterministic_hash(&mut hasher);
             has_hash = true;
         }
         for modifier in modifiers.iter() {
@@ -314,15 +339,7 @@ async fn value_to_string(ident: AssetIdent) -> Result<Vc<RcStr>> {
 
     if !ident.assets.is_empty() {
         s.push_str(" {");
-
-        for (i, (key, asset)) in ident.assets.iter().enumerate() {
-            if i > 0 {
-                s.push(',');
-            }
-
-            let asset_str = asset.await?.value_to_string().await?;
-            write!(s, " {key} => {asset_str:?}")?;
-        }
+        s.push_str(&ident.assets);
 
         s.push_str(" }");
     }
