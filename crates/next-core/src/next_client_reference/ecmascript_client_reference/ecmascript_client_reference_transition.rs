@@ -115,7 +115,7 @@ impl Transition for NextEcmascriptClientReferenceTransition {
                 match part {
                     Some(part) => {
                         let mut ident = ident;
-                        ident.parts.push(part);
+                        ident.add_part(part);
                         ident
                     }
                     None => ident,

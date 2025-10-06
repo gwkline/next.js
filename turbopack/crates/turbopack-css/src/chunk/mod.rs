@@ -188,7 +188,7 @@ impl CssChunk {
             fragment: RcStr::default(),
             assets: RcStr::default(),
             modifiers: RcStr::default(),
-            parts: Vec::new(),
+            parts: RcStr::default(),
             layer: None,
             content_type: None,
         };

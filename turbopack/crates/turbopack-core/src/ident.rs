@@ -83,8 +83,9 @@ pub struct AssetIdent {
     pub assets: RcStr,
     /// The modifiers of this asset (e.g. `client chunks`) as a comma separated list
     pub modifiers: RcStr,
-    /// The parts of the asset that are (ECMAScript) modules
-    pub parts: Vec<ModulePart>,
+    /// The parts of the asset that are (ECMAScript) modules a list of <part> separated by
+    /// whitespace.
+    pub parts: RcStr,
     /// The asset layer the asset was created from.
     pub layer: Option<Layer>,
     /// The MIME content type, if this asset was created from a data URL.
@@ -148,6 +149,35 @@ impl AssetIdent {
         Ok(())
     }
 
+    pub fn add_part(&mut self, part: ModulePart) {
+        if matches!(part, ModulePart::Facade) {
+            // facade is not included in ident as switching between facade and non-facade
+            // shouldn't change the ident
+            return;
+        }
+        if self.parts.is_empty() {
+            self.parts = RcStr::from(part.to_string());
+            return;
+        }
+        self.add_parts(std::iter::once(part));
+    }
+
+    pub fn add_parts(&mut self, new_parts: impl IntoIterator<Item = ModulePart>) {
+        let mut parts = take(&mut self.parts).into_owned();
+        for part in new_parts {
+            if matches!(part, ModulePart::Facade) {
+                // facade is not included in ident as switching between facade and non-facade
+                // shouldn't change the ident
+                continue;
+            }
+            if !parts.is_empty() {
+                parts.push(' ');
+            }
+            parts.push_str(&part.to_string());
+        }
+        self.parts = RcStr::from(parts);
+    }
+
     pub async fn rename_as_ref(&mut self, pattern: &str) -> Result<()> {
         let root = self.path.root().await?;
         self.path = root.join(&pattern.replace('*', &self.path.path))?;
@@ -161,7 +191,7 @@ impl AssetIdent {
             fragment: RcStr::default(),
             assets: RcStr::default(),
             modifiers: RcStr::default(),
-            parts: Vec::new(),
+            parts: RcStr::default(),
             layer: None,
             content_type: None,
         }
@@ -237,12 +267,12 @@ impl AssetIdent {
             fragment.deterministic_hash(&mut hasher);
             has_hash = true;
         }
-        if !self.assets.is_empty() {
+        if !assets.is_empty() {
             2_u8.deterministic_hash(&mut hasher);
             assets.deterministic_hash(&mut hasher);
             has_hash = true;
         }
-        if !self.modifiers.is_empty() {
+        if !modifiers.is_empty() {
             // TODO: document why it is important to strip the default modifier from the hash
             for modifier in modifiers.split(", ") {
                 if let Some(default_modifier) = default_modifier
@@ -255,43 +285,9 @@ impl AssetIdent {
                 has_hash = true;
             }
         }
-        for part in parts.iter() {
+        if !parts.is_empty() {
             4_u8.deterministic_hash(&mut hasher);
-            match part {
-                ModulePart::Evaluation => {
-                    1_u8.deterministic_hash(&mut hasher);
-                }
-                ModulePart::Export(export) => {
-                    2_u8.deterministic_hash(&mut hasher);
-                    export.deterministic_hash(&mut hasher);
-                }
-                ModulePart::RenamedExport {
-                    original_export,
-                    export,
-                } => {
-                    3_u8.deterministic_hash(&mut hasher);
-                    original_export.deterministic_hash(&mut hasher);
-                    export.deterministic_hash(&mut hasher);
-                }
-                ModulePart::RenamedNamespace { export } => {
-                    4_u8.deterministic_hash(&mut hasher);
-                    export.deterministic_hash(&mut hasher);
-                }
-                ModulePart::Internal(id) => {
-                    5_u8.deterministic_hash(&mut hasher);
-                    id.deterministic_hash(&mut hasher);
-                }
-                ModulePart::Locals => {
-                    6_u8.deterministic_hash(&mut hasher);
-                }
-                ModulePart::Exports => {
-                    7_u8.deterministic_hash(&mut hasher);
-                }
-                ModulePart::Facade => {
-                    8_u8.deterministic_hash(&mut hasher);
-                }
-            }
-
+            parts.deterministic_hash(&mut hasher);
             has_hash = true;
         }
         if let Some(layer) = layer {
@@ -361,7 +357,6 @@ async fn value_to_string(ident: AssetIdent) -> Result<Vc<RcStr>> {
     if !ident.assets.is_empty() {
         s.push_str(" {");
         s.push_str(&ident.assets);
-
         s.push_str(" }");
     }
 
@@ -382,13 +377,7 @@ async fn value_to_string(ident: AssetIdent) -> Result<Vc<RcStr>> {
     }
 
     if !ident.parts.is_empty() {
-        for part in ident.parts.iter() {
-            if !matches!(part, ModulePart::Facade) {
-                // facade is not included in ident as switching between facade and non-facade
-                // shouldn't change the ident
-                write!(s, " <{part}>")?;
-            }
-        }
+        s.push_str(&ident.parts);
     }
 
     Ok(Vc::cell(s.into()))

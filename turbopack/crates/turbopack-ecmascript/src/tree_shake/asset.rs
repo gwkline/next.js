@@ -308,7 +308,7 @@ impl Module for EcmascriptModulePartAsset {
     #[turbo_tasks::function]
     async fn ident(&self) -> Result<Vc<AssetIdent>> {
         let mut ident = self.full_module.ident().owned().await?;
-        ident.parts.push(self.part.clone());
+        ident.add_part(self.part.clone());
         Ok(ident.cell())
     }
 

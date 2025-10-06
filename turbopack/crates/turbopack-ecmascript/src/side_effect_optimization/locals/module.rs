@@ -48,7 +48,7 @@ impl Module for EcmascriptModuleLocalsModule {
     #[turbo_tasks::function]
     async fn ident(&self) -> Result<Vc<AssetIdent>> {
         let mut ident = self.module.ident().owned().await?;
-        ident.parts.push(ModulePart::locals());
+        ident.add_part(ModulePart::locals());
         Ok(ident.cell())
     }
 

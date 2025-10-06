@@ -150,7 +150,7 @@ impl Module for EcmascriptModuleFacadeModule {
     #[turbo_tasks::function]
     async fn ident(&self) -> Result<Vc<AssetIdent>> {
         let mut ident = self.module.ident().owned().await?;
-        ident.parts.push(self.part.clone());
+        ident.add_part(self.part.clone());
         Ok(ident.cell())
     }
 
