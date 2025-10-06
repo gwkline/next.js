@@ -12,8 +12,8 @@ use serde::{Deserialize, Serialize};
 use tracing::Instrument;
 use turbo_prehash::BuildHasherExt;
 use turbo_tasks::{
-    FxIndexMap, FxIndexSet, NonLocalValue, ResolvedVc, TaskInput, TryJoinIterExt, ValueToString,
-    Vc, trace::TraceRawVcs,
+    FxIndexMap, FxIndexSet, NonLocalValue, ResolvedVc, TaskInput, TryJoinIterExt, Vc,
+    trace::TraceRawVcs,
 };
 
 use crate::{
@@ -76,10 +76,10 @@ impl ModuleBatchesGraph {
         let Some(entry) = self.entries.get(&entry) else {
             bail!(
                 "Entry {} is not in graph (possible entries: {:#?})",
-                entry.ident().to_string().await?,
+                entry.ident().await?.value_to_string().await?,
                 self.entries
                     .keys()
-                    .map(|e| e.ident().to_string())
+                    .map(async |e| e.ident().await?.value_to_string().await)
                     .try_join()
                     .await?
             );

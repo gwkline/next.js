@@ -9,7 +9,7 @@ use crate::{ident::AssetIdent, issue::OptionIssueSource};
 #[turbo_tasks::value(shared)]
 pub struct AnalyzeIssue {
     pub severity: IssueSeverity,
-    pub source_ident: ResolvedVc<AssetIdent>,
+    pub source_ident: AssetIdent,
     pub title: ResolvedVc<RcStr>,
     pub message: ResolvedVc<StyledString>,
     pub code: Option<RcStr>,
@@ -21,7 +21,7 @@ impl AnalyzeIssue {
     #[turbo_tasks::function]
     pub fn new(
         severity: IssueSeverity,
-        source_ident: ResolvedVc<AssetIdent>,
+        source_ident: AssetIdent,
         title: ResolvedVc<RcStr>,
         message: ResolvedVc<StyledString>,
         code: Option<RcStr>,
@@ -67,7 +67,7 @@ impl Issue for AnalyzeIssue {
 
     #[turbo_tasks::function]
     async fn file_path(&self) -> Result<Vc<FileSystemPath>> {
-        Ok(self.source_ident.path().await?.cell())
+        Ok(self.source_ident.path.clone().cell())
     }
 
     #[turbo_tasks::function]

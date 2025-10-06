@@ -4,8 +4,7 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use turbo_rcstr::RcStr;
 use turbo_tasks::{
-    NonLocalValue, ReadRef, ResolvedVc, TaskInput, TryJoinIterExt, ValueToString, Vc,
-    trace::TraceRawVcs,
+    NonLocalValue, ReadRef, ResolvedVc, TaskInput, TryJoinIterExt, Vc, trace::TraceRawVcs,
 };
 
 use crate::{
@@ -35,7 +34,7 @@ impl ModuleOrBatch {
     pub async fn ident_strings(self) -> Result<IdentStrings> {
         Ok(match self {
             ModuleOrBatch::Module(module) => {
-                IdentStrings::Single(module.ident().to_string().await?)
+                IdentStrings::Single(module.ident().await?.value_to_string().await?)
             }
             ModuleOrBatch::Batch(batch) => IdentStrings::Multiple(batch.ident_strings().await?),
             ModuleOrBatch::None(_) => IdentStrings::None,
@@ -74,7 +73,7 @@ impl ChunkableModuleOrBatch {
     pub async fn ident_strings(self) -> Result<IdentStrings> {
         Ok(match self {
             ChunkableModuleOrBatch::Module(module) => {
-                IdentStrings::Single(module.ident().to_string().await?)
+                IdentStrings::Single(module.ident().await?.value_to_string().await?)
             }
             ChunkableModuleOrBatch::Batch(batch) => {
                 IdentStrings::Multiple(batch.ident_strings().await?)
@@ -135,7 +134,7 @@ impl ModuleBatch {
         Ok(Vc::cell(
             self.modules
                 .iter()
-                .map(|module| module.ident().to_string().owned())
+                .map(async |module| module.ident().await?.value_to_string().owned().await)
                 .try_join()
                 .await?,
         ))

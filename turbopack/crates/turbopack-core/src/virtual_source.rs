@@ -10,7 +10,7 @@ use crate::{
 /// A [Source] that is created from some passed source code.
 #[turbo_tasks::value]
 pub struct VirtualSource {
-    pub ident: ResolvedVc<AssetIdent>,
+    pub ident: AssetIdent,
     pub content: ResolvedVc<AssetContent>,
 }
 impl VirtualSource {
@@ -23,10 +23,7 @@ impl VirtualSource {
 impl VirtualSource {
     #[turbo_tasks::function]
     pub fn new_with_ident(ident: AssetIdent, content: ResolvedVc<AssetContent>) -> Vc<Self> {
-        Self::cell(VirtualSource {
-            ident: ident.resolved_cell(),
-            content,
-        })
+        Self::cell(VirtualSource { ident, content })
     }
 }
 
@@ -34,7 +31,7 @@ impl VirtualSource {
 impl Source for VirtualSource {
     #[turbo_tasks::function]
     fn ident(&self) -> Vc<AssetIdent> {
-        *self.ident
+        self.ident.clone().cell()
     }
 }
 

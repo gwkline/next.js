@@ -1,6 +1,6 @@
 use anyhow::{Result, bail};
 use rustc_hash::FxHashMap;
-use turbo_tasks::{ResolvedVc, ValueToString, Vc};
+use turbo_tasks::{ResolvedVc, Vc};
 use turbo_tasks_hash::hash_xxh3_hash64;
 
 use super::ModuleId;
@@ -9,7 +9,7 @@ use crate::ident::AssetIdent;
 #[turbo_tasks::value_trait]
 pub trait ModuleIdStrategy {
     #[turbo_tasks::function]
-    fn get_module_id(self: Vc<Self>, ident: Vc<AssetIdent>) -> Vc<ModuleId>;
+    fn get_module_id(self: Vc<Self>, ident: AssetIdent) -> Vc<ModuleId>;
 }
 
 #[turbo_tasks::value]
@@ -28,20 +28,20 @@ impl DevModuleIdStrategy {
 #[turbo_tasks::value_impl]
 impl ModuleIdStrategy for DevModuleIdStrategy {
     #[turbo_tasks::function]
-    async fn get_module_id(self: Vc<Self>, ident: Vc<AssetIdent>) -> Result<Vc<ModuleId>> {
-        Ok(ModuleId::String(ident.to_string().owned().await?).cell())
+    async fn get_module_id(self: Vc<Self>, ident: AssetIdent) -> Result<Vc<ModuleId>> {
+        Ok(ModuleId::String(ident.value_to_string().owned().await?).cell())
     }
 }
 
 #[turbo_tasks::value(shared)]
 pub struct GlobalModuleIdStrategy {
-    pub module_id_map: FxHashMap<ResolvedVc<AssetIdent>, u64>,
+    pub module_id_map: FxHashMap<AssetIdent, u64>,
 }
 
 #[turbo_tasks::value_impl]
 impl ModuleIdStrategy for GlobalModuleIdStrategy {
     #[turbo_tasks::function]
-    async fn get_module_id(&self, ident: ResolvedVc<AssetIdent>) -> Result<Vc<ModuleId>> {
+    async fn get_module_id(&self, ident: AssetIdent) -> Result<Vc<ModuleId>> {
         if let Some(module_id) = self.module_id_map.get(&ident) {
             const JS_MAX_SAFE_INTEGER: u64 = (1u64 << 53) - 1;
             if *module_id > JS_MAX_SAFE_INTEGER {
@@ -50,16 +50,11 @@ impl ModuleIdStrategy for GlobalModuleIdStrategy {
             return Ok(ModuleId::Number(*module_id).cell());
         }
 
-        let ident_string = ident.to_string().await?;
+        let ident_string = ident.value_to_string().owned().await?;
         if ident_string.ends_with("[app-client] (ecmascript, next/dynamic entry)") {
             // TODO: This shouldn't happen, but is a temporary workaround to ignore next/dynamic
             // imports of a server component from another server component.
-            return Ok(ModuleId::String(
-                hash_xxh3_hash64(ident.to_string().await?)
-                    .to_string()
-                    .into(),
-            )
-            .cell());
+            return Ok(ModuleId::String(hash_xxh3_hash64(ident_string).to_string().into()).cell());
         }
 
         bail!("ModuleId not found for ident: {ident_string:?}");

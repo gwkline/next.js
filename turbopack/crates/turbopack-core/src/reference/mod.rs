@@ -234,7 +234,11 @@ impl ValueToString for TracedModuleReference {
     #[turbo_tasks::function]
     async fn to_string(&self) -> Result<Vc<RcStr>> {
         Ok(Vc::cell(
-            format!("traced {}", self.module.ident().to_string().await?).into(),
+            format!(
+                "traced {}",
+                self.module.ident().await?.value_to_string().await?
+            )
+            .into(),
         ))
     }
 }

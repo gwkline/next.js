@@ -39,8 +39,7 @@ use serde::{Deserialize, Serialize};
 use tracing::Instrument;
 use turbo_rcstr::{RcStr, rcstr};
 use turbo_tasks::{
-    Completion, NonLocalValue, ResolvedVc, TryJoinIterExt, ValueToString, Vc, fxindexset,
-    trace::TraceRawVcs,
+    Completion, NonLocalValue, ResolvedVc, TryJoinIterExt, Vc, fxindexset, trace::TraceRawVcs,
 };
 use turbo_tasks_env::{CustomProcessEnv, ProcessEnv};
 use turbo_tasks_fs::{File, FileContent, FileSystemPath};
@@ -1231,11 +1230,7 @@ impl AppEndpoint {
         // We only need the client runtime entries for pages not for Route Handlers
         let (availability_info, client_shared_chunks) = if is_app_page {
             let client_shared_chunk_group = get_app_client_shared_chunk_group(
-                {
-                    let mut ident = AssetIdent::from_path(project.project_path().owned().await?);
-                    ident.add_modifier(rcstr!("client-shared-chunks"));
-                    ident.cell()
-                },
+                client_shared_chunks_ident(project).owned().await?,
                 this.app_project.client_runtime_entries(),
                 *module_graphs.full,
                 *client_chunking_context,
@@ -1327,7 +1322,7 @@ impl AppEndpoint {
         let polyfill_output_path = client_chunking_context
             .chunk_path(
                 Some(Vc::upcast(polyfill_source)),
-                polyfill_source.ident(),
+                polyfill_source.ident().owned().await?,
                 None,
                 rcstr!(".js"),
             )
@@ -1739,7 +1734,7 @@ impl AppEndpoint {
                     availability_info,
                 } = *chunking_context
                     .chunk_group(
-                        server_action_manifest_loader.ident(),
+                        server_action_manifest_loader.ident().owned().await?,
                         ChunkGroup::Entry(
                             [ResolvedVc::upcast(server_action_manifest_loader)]
                                 .into_iter()
@@ -1752,7 +1747,7 @@ impl AppEndpoint {
 
                 let chunk_group = chunking_context
                     .evaluated_chunk_group_assets(
-                        app_entry.rsc_entry.ident(),
+                        app_entry.rsc_entry.ident().owned().await?,
                         ChunkGroup::Entry(vec![app_entry.rsc_entry]),
                         module_graph,
                         availability_info,
@@ -1797,13 +1792,9 @@ impl AppEndpoint {
                             availability_info,
                         } = *chunking_context
                             .chunk_group(
-                                {
-                                    let mut ident = AssetIdent::from_path(
-                                        this.app_project.project().project_path().owned().await?,
-                                    );
-                                    ident.add_modifier(rcstr!("server-utils"));
-                                    ident.cell()
-                                },
+                                server_utils_ident(this.app_project.project())
+                                    .owned()
+                                    .await?,
                                 // TODO this should be ChunkGroup::Shared
                                 ChunkGroup::Entry(server_utils),
                                 module_graph,
@@ -1833,10 +1824,19 @@ impl AppEndpoint {
                                 .saturating_sub(1),
                         )
                     {
-                        let span = tracing::trace_span!(
-                            "layout segment",
-                            name = display(server_component.ident().to_string().await?)
-                        );
+                        let span =
+                            tracing::trace_span!("layout segment", name = tracing::field::Empty);
+                        if !span.is_disabled() {
+                            span.record(
+                                "name",
+                                server_component
+                                    .ident()
+                                    .await?
+                                    .value_to_string()
+                                    .await?
+                                    .as_str(),
+                            );
+                        }
                         async {
                             let ChunkGroupResult {
                                 assets,
@@ -1844,7 +1844,7 @@ impl AppEndpoint {
                                 availability_info,
                             } = *chunking_context
                                 .chunk_group(
-                                    server_component.ident(),
+                                    server_component.ident().owned().await?,
                                     // TODO this should be ChunkGroup::Shared
                                     ChunkGroup::Entry(vec![ResolvedVc::upcast(
                                         server_component.await?.module,
@@ -1874,7 +1874,7 @@ impl AppEndpoint {
                             availability_info,
                         } = *chunking_context
                             .chunk_group(
-                                server_action_manifest_loader.ident(),
+                                server_action_manifest_loader.ident().owned().await?,
                                 ChunkGroup::Entry(vec![ResolvedVc::upcast(
                                     server_action_manifest_loader,
                                 )]),
@@ -1919,6 +1919,20 @@ impl AppEndpoint {
             }
         })
     }
+}
+
+#[turbo_tasks::function]
+async fn client_shared_chunks_ident(project: ResolvedVc<Project>) -> Result<Vc<AssetIdent>> {
+    let mut ident = AssetIdent::from_path(project.project_path().owned().await?);
+    ident.add_modifier(rcstr!("client-shared-chunks"));
+    Ok(ident.cell())
+}
+
+#[turbo_tasks::function]
+async fn server_utils_ident(project: ResolvedVc<Project>) -> Result<Vc<AssetIdent>> {
+    let mut ident = AssetIdent::from_path(project.project_path().owned().await?);
+    ident.add_modifier(rcstr!("server-utils"));
+    Ok(ident.cell())
 }
 
 async fn create_app_paths_manifest(

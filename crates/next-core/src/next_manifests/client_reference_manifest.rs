@@ -6,9 +6,7 @@ use rustc_hash::FxHashMap;
 use serde::Serialize;
 use tracing::Instrument;
 use turbo_rcstr::{RcStr, rcstr};
-use turbo_tasks::{
-    FxIndexMap, FxIndexSet, ResolvedVc, TryFlatJoinIterExt, TryJoinIterExt, ValueToString, Vc,
-};
+use turbo_tasks::{FxIndexMap, FxIndexSet, ResolvedVc, TryFlatJoinIterExt, TryJoinIterExt, Vc};
 use turbo_tasks_fs::{File, FileSystemPath};
 use turbopack_core::{
     asset::{Asset, AssetContent},
@@ -251,7 +249,10 @@ async fn build_manifest(
             let app_client_reference_ty =
                 ClientReferenceType::EcmascriptClientReference(client_reference_module);
 
-            let server_path = client_reference_module_ref.server_ident.to_string().await?;
+            let server_path = client_reference_module_ref
+                .server_ident
+                .value_to_string()
+                .await?;
             let client_module = client_reference_module_ref.client_module;
             let client_chunk_item_id = client_module
                 .chunk_item_id(**client_chunking_context)

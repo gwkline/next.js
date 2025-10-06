@@ -29,7 +29,7 @@ impl ValueToString for NextServerUtilityModuleReference {
         Ok(Vc::cell(
             format!(
                 "Next.js server utility {}",
-                self.asset.ident().to_string().await?
+                self.asset.ident().await?.value_to_string().await?
             )
             .into(),
         ))

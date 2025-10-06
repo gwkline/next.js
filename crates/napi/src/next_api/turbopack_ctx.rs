@@ -39,7 +39,7 @@ pub type NextTurboTasks =
 /// It should not be passed to a [`turbo_tasks::function`]. For serializable information about the
 /// project, use the [`next_api::project::Project`] type instead.
 ///
-/// This type is a wrapper around an [`Arc`] and is therefore cheaply clonable. It is [`Send`] and
+/// This type is a wrapper around an [`Arc`] and is therefore cheaply cloneable. It is [`Send`] and
 /// [`Sync`].
 #[derive(Clone)]
 pub struct NextTurbopackContext {

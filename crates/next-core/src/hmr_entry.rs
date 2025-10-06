@@ -40,17 +40,14 @@ async fn hmr_entry_point_base_ident() -> Result<Vc<AssetIdent>> {
 
 #[turbo_tasks::value(shared)]
 pub struct HmrEntryModule {
-    pub ident: ResolvedVc<AssetIdent>,
+    pub ident: AssetIdent,
     pub module: ResolvedVc<Box<dyn ChunkableModule>>,
 }
 
 #[turbo_tasks::value_impl]
 impl HmrEntryModule {
     #[turbo_tasks::function]
-    pub fn new(
-        ident: ResolvedVc<AssetIdent>,
-        module: ResolvedVc<Box<dyn ChunkableModule>>,
-    ) -> Vc<Self> {
+    pub fn new(ident: AssetIdent, module: ResolvedVc<Box<dyn ChunkableModule>>) -> Vc<Self> {
         Self { ident, module }.cell()
     }
 }
@@ -60,7 +57,7 @@ impl Module for HmrEntryModule {
     #[turbo_tasks::function]
     async fn ident(&self) -> Result<Vc<AssetIdent>> {
         let mut ident = hmr_entry_point_base_ident().owned().await?;
-        ident.add_asset(rcstr!("ENTRY"), self.ident);
+        ident.add_asset(rcstr!("ENTRY"), self.ident.clone().resolved_cell());
         Ok(ident.cell())
     }
 

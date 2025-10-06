@@ -263,7 +263,7 @@ pub async fn get_intermediate_asset(
 ) -> Result<Vc<Box<dyn OutputAsset>>> {
     Ok(chunking_context.root_entry_chunk_group_asset(
         chunking_context
-            .chunk_path(None, main_entry.ident(), None, rcstr!(".js"))
+            .chunk_path(None, main_entry.ident().owned().await?, None, rcstr!(".js"))
             .owned()
             .await?,
         other_entries.with_entry(*main_entry),

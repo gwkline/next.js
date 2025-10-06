@@ -52,8 +52,7 @@ impl Transition for NextEcmascriptClientReferenceTransition {
 
         let this = self.await?;
 
-        let source_ident = source.ident();
-        let ident = source_ident.await?;
+        let ident = source.ident().owned().await?;
 
         let client_source = if ident.path.path.contains("next/dist/esm/") {
             let path = ident
@@ -115,11 +114,11 @@ impl Transition for NextEcmascriptClientReferenceTransition {
             EcmascriptClientReferenceModule::new(
                 match part {
                     Some(part) => {
-                        let mut ident = (*ident).clone();
+                        let mut ident = ident;
                         ident.parts.push(part);
-                        ident.cell()
+                        ident
                     }
-                    None => source_ident,
+                    None => ident,
                 },
                 Vc::upcast(server_context),
                 *client_module,

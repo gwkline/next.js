@@ -35,7 +35,12 @@ impl OutputAsset for CssChunkSourceMapAsset {
             .chunk
             .await?
             .chunking_context
-            .chunk_path(Some(Vc::upcast(self)), ident, None, rcstr!(".css"))
+            .chunk_path(
+                Some(Vc::upcast(self)),
+                ident.owned().await?,
+                None,
+                rcstr!(".css"),
+            )
             .await?
             .append(".map")?
             .cell())

@@ -3,9 +3,7 @@ use rustc_hash::FxHashSet;
 use serde::Serialize;
 use tracing::instrument;
 use turbo_rcstr::{RcStr, rcstr};
-use turbo_tasks::{
-    FxIndexMap, FxIndexSet, ResolvedVc, TryJoinIterExt, ValueToString, Vc, fxindexmap,
-};
+use turbo_tasks::{FxIndexMap, FxIndexSet, ResolvedVc, TryJoinIterExt, Vc, fxindexmap};
 use turbopack_browser::ecmascript::EcmascriptBrowserChunk;
 use turbopack_core::{
     chunk::{Chunk, ChunkItem, ChunkItemExt, ModuleId},
@@ -75,7 +73,7 @@ where
                     child,
                     WebpackStatsReason {
                         module: parent_path.clone(),
-                        module_identifier: parent.ident().to_string().owned().await?,
+                        module_identifier: parent.ident().await?.value_to_string().owned().await?,
                         module_name: parent_path,
                         ty,
                     },
@@ -154,7 +152,12 @@ where
             Ok(WebpackStatsModule {
                 name: chunk_item.asset_ident().path().await?.path.clone(),
                 id: chunk_item.id().owned().await?,
-                identifier: chunk_item.asset_ident().to_string().owned().await?,
+                identifier: chunk_item
+                    .asset_ident()
+                    .await?
+                    .value_to_string()
+                    .owned()
+                    .await?,
                 chunks: chunks.into_iter().collect(),
                 size,
                 // TODO Find all incoming edges to this module

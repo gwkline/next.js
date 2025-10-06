@@ -13,9 +13,9 @@ use lightningcss::{
 use rustc_hash::FxHashMap;
 use smallvec::smallvec;
 use swc_core::base::sourcemap::SourceMapBuilder;
-use tracing::Instrument;
+use tracing::{Instrument, field::display};
 use turbo_rcstr::{RcStr, rcstr};
-use turbo_tasks::{FxIndexMap, ResolvedVc, ValueToString, Vc};
+use turbo_tasks::{FxIndexMap, ResolvedVc, Vc};
 use turbo_tasks_fs::{FileContent, FileSystemPath, rope::Rope};
 use turbopack_core::{
     SOURCE_URL_PROTOCOL,
@@ -363,13 +363,17 @@ pub async fn parse_css(
     ty: CssModuleAssetType,
     environment: Option<ResolvedVc<Environment>>,
 ) -> Result<Vc<ParseCssResult>> {
-    let span = tracing::info_span!(
-        "parse css",
-        name = display(source.ident().to_string().await?)
-    );
+    let span = tracing::info_span!("parse css", name = tracing::field::Empty);
+    if !span.is_disabled() {
+        span.record(
+            "name",
+            display(source.ident().await?.value_to_string().await?),
+        );
+    }
     async move {
         let content = source.content();
-        let ident_str = &*source.ident().to_string().await?;
+        let ident_str = &*source.ident().await?.value_to_string().await?;
+
         Ok(match &*content.await? {
             AssetContent::Redirect { .. } => ParseCssResult::Unparsable.cell(),
             AssetContent::File(file_content) => match &*file_content.await? {

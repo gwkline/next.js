@@ -215,7 +215,7 @@ pub async fn get_app_client_references_chunks(
                             {
                                 let mut ident = (*base_ident).clone();
                                 ident.add_modifier(rcstr!("ssr modules"));
-                                ident.cell()
+                                ident
                             },
                             ChunkGroup::IsolatedMerged {
                                 parent: parent_chunk_group,
@@ -257,7 +257,7 @@ pub async fn get_app_client_references_chunks(
                         {
                             let mut ident = (*base_ident).clone();
                             ident.add_modifier(rcstr!("client modules"));
-                            ident.cell()
+                            ident
                         },
                         ChunkGroup::IsolatedMerged {
                             parent: parent_chunk_group,

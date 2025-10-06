@@ -3,7 +3,7 @@ use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
 use tracing::Instrument;
 use turbo_rcstr::RcStr;
-use turbo_tasks::{ReadRef, ResolvedVc, TryJoinIterExt, ValueToString, Vc};
+use turbo_tasks::{ReadRef, ResolvedVc, TryJoinIterExt, Vc};
 use turbo_tasks_hash::hash_xxh3_hash64;
 use turbopack_core::{
     chunk::{ChunkableModule, ChunkingType, module_id_strategies::GlobalModuleIdStrategy},
@@ -49,8 +49,8 @@ pub async fn get_global_module_id_strategy(
         let mut module_id_map = module_idents
             .chain(async_idents.into_iter())
             .map(|ident| async move {
-                let ident = ident.to_resolved().await?;
-                let ident_str = ident.to_string().await?;
+                let ident = ident.await?;
+                let ident_str = ident.value_to_string().await?;
                 let hash = hash_xxh3_hash64(&ident_str);
                 Ok((ident, (ident_str, hash)))
             })
@@ -64,7 +64,7 @@ pub async fn get_global_module_id_strategy(
         Ok(GlobalModuleIdStrategy {
             module_id_map: module_id_map
                 .into_iter()
-                .map(|(ident, (_, hash))| (ident, hash))
+                .map(|(ident, (_, hash))| ((*ident).clone(), hash))
                 .collect(),
         }
         .cell())
@@ -77,7 +77,7 @@ const JS_MAX_SAFE_INTEGER: u64 = (1u64 << 53) - 1;
 
 /// Shorten hashes and handle any collisions.
 fn finalize_module_ids(
-    merged_module_ids: &mut FxHashMap<ResolvedVc<AssetIdent>, (ReadRef<RcStr>, u64)>,
+    merged_module_ids: &mut FxHashMap<ReadRef<AssetIdent>, (ReadRef<RcStr>, u64)>,
 ) {
     // 5% fill rate, as done in Webpack
     // https://github.com/webpack/webpack/blob/27cf3e59f5f289dfc4d76b7a1df2edbc4e651589/lib/ids/IdHelpers.js#L366-L405
@@ -88,7 +88,7 @@ fn finalize_module_ids(
     );
 
     let mut used_ids =
-        FxHashMap::<u64, SmallVec<[(ResolvedVc<AssetIdent>, ReadRef<RcStr>); 1]>>::default();
+        FxHashMap::<u64, SmallVec<[(ReadRef<AssetIdent>, ReadRef<RcStr>); 1]>>::default();
 
     // Run in multiple passes, to not depend on the order of the `merged_module_ids` (i.e. the order
     // of imports). Hashes could still change if modules are added or removed.
@@ -99,7 +99,7 @@ fn finalize_module_ids(
         used_ids
             .entry(first_pass_hash)
             .or_default()
-            .push((*ident, ident_str.clone()));
+            .push((ident.clone(), ident_str.clone()));
         *full_hash = first_pass_hash;
     }
 
@@ -116,6 +116,7 @@ fn finalize_module_ids(
         let list = used_ids.get_mut(&hash).unwrap();
         // Take the vector but keep the (empty) entry, so that the "contains_key" check below works
         let mut list = std::mem::take(list);
+        // Sort to ensure determinism since the original map is not in a deterministic order.
         list.sort_by(|a, b| a.1.cmp(&b.1));
 
         // Skip the first one, one module can keep the original hash

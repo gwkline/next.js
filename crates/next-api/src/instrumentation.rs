@@ -105,7 +105,7 @@ impl InstrumentationEndpoint {
 
         let edge_chunking_context = this.project.edge_chunking_context(false);
         Ok(edge_chunking_context.evaluated_chunk_group_assets(
-            module.ident(),
+            module.ident().owned().await?,
             ChunkGroup::Entry(vec![module]),
             module_graph,
             AvailabilityInfo::Root,

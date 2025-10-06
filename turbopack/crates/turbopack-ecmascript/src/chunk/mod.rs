@@ -150,7 +150,7 @@ impl ValueToString for EcmascriptChunk {
     #[turbo_tasks::function]
     async fn to_string(self: Vc<Self>) -> Result<Vc<RcStr>> {
         Ok(Vc::cell(
-            format!("chunk {}", self.ident().to_string().await?).into(),
+            format!("chunk {}", self.ident().await?.value_to_string().await?).into(),
         ))
     }
 }
@@ -171,8 +171,8 @@ impl Introspectable for EcmascriptChunk {
     }
 
     #[turbo_tasks::function]
-    fn title(self: Vc<Self>) -> Vc<RcStr> {
-        self.ident().to_string()
+    async fn title(self: Vc<Self>) -> Result<Vc<RcStr>> {
+        Ok(self.ident().await?.value_to_string())
     }
 
     #[turbo_tasks::function]
@@ -181,7 +181,11 @@ impl Introspectable for EcmascriptChunk {
         let this = self.await?;
         details += "Chunk items:\n\n";
         for chunk_item in this.content.included_chunk_items().await? {
-            writeln!(details, "- {}", chunk_item.asset_ident().to_string().await?)?;
+            writeln!(
+                details,
+                "- {}",
+                chunk_item.asset_ident().await?.value_to_string().await?
+            )?;
         }
         Ok(Vc::cell(details.into()))
     }

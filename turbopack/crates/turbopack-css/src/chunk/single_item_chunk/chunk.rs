@@ -60,7 +60,7 @@ impl SingleItemCssChunk {
             &*this.chunking_context.minify_type().await?,
             MinifyType::NoMinify
         ) {
-            let id = this.item.asset_ident().to_string().await?;
+            let id = this.item.asset_ident().await?.value_to_string().await?;
             writeln!(code, "/* {id} */")?;
         }
         let content = this.item.content().await?;
@@ -101,7 +101,7 @@ impl OutputAsset for SingleItemCssChunk {
     async fn path(self: Vc<Self>) -> Result<Vc<FileSystemPath>> {
         Ok(self.await?.chunking_context.chunk_path(
             Some(Vc::upcast(self)),
-            self.ident_for_path(),
+            self.ident_for_path().owned().await?,
             None,
             rcstr!(".single.css"),
         ))
@@ -178,7 +178,7 @@ impl Introspectable for SingleItemCssChunk {
         write!(
             details,
             "Chunk item: {}",
-            this.item.asset_ident().to_string().await?
+            this.item.asset_ident().await?.value_to_string().await?
         )?;
         Ok(Vc::cell(details.into()))
     }

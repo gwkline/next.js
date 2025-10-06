@@ -1,7 +1,7 @@
 use anyhow::{Context, Result, bail};
 use tracing::Instrument;
 use turbo_rcstr::{RcStr, rcstr};
-use turbo_tasks::{ResolvedVc, TaskInput, TryJoinIterExt, Upcast, ValueToString, Vc};
+use turbo_tasks::{ResolvedVc, TaskInput, TryJoinIterExt, Upcast, Vc};
 use turbo_tasks_fs::FileSystemPath;
 use turbopack_core::{
     asset::Asset,
@@ -323,14 +323,13 @@ impl ChunkingContext for NodeJsChunkingContext {
     async fn chunk_path(
         &self,
         _asset: Option<Vc<Box<dyn Asset>>>,
-        ident: Vc<AssetIdent>,
+        ident: AssetIdent,
         prefix: Option<RcStr>,
         extension: RcStr,
     ) -> Result<Vc<FileSystemPath>> {
         let root_path = self.chunk_root_path.clone();
         let name = ident
             .output_name(self.root_path.clone(), prefix, extension)
-            .owned()
             .await?;
         Ok(root_path.join(&name)?.cell())
     }
@@ -365,9 +364,9 @@ impl ChunkingContext for NodeJsChunkingContext {
     async fn asset_path(
         &self,
         content_hash: RcStr,
-        original_asset_ident: Vc<AssetIdent>,
+        original_asset_ident: AssetIdent,
     ) -> Result<Vc<FileSystemPath>> {
-        let source_path = original_asset_ident.path().await?;
+        let source_path = &original_asset_ident.path;
         let basename = source_path.file_name();
         let asset_path = match source_path.extension_ref() {
             Some(ext) => format!(
@@ -386,12 +385,12 @@ impl ChunkingContext for NodeJsChunkingContext {
     #[turbo_tasks::function]
     async fn chunk_group(
         self: ResolvedVc<Self>,
-        ident: Vc<AssetIdent>,
+        ident: AssetIdent,
         chunk_group: ChunkGroup,
         module_graph: Vc<ModuleGraph>,
         availability_info: AvailabilityInfo,
     ) -> Result<Vc<ChunkGroupResult>> {
-        let span = tracing::info_span!("chunking", name = display(ident.to_string().await?));
+        let span = tracing::info_span!("chunking", name = display(ident.value_to_string().await?));
         async move {
             let modules = chunk_group.entries();
             let MakeChunkGroupResult {
@@ -498,7 +497,7 @@ impl ChunkingContext for NodeJsChunkingContext {
     #[turbo_tasks::function]
     fn evaluated_chunk_group(
         self: Vc<Self>,
-        _ident: Vc<AssetIdent>,
+        _ident: AssetIdent,
         _chunk_group: ChunkGroup,
         _module_graph: Vc<ModuleGraph>,
         _availability_info: AvailabilityInfo,
@@ -507,7 +506,7 @@ impl ChunkingContext for NodeJsChunkingContext {
     }
 
     #[turbo_tasks::function]
-    fn chunk_item_id_from_ident(&self, ident: Vc<AssetIdent>) -> Vc<ModuleId> {
+    fn chunk_item_id_from_ident(&self, ident: AssetIdent) -> Vc<ModuleId> {
         self.module_id_strategy.get_module_id(ident)
     }
 
@@ -534,14 +533,15 @@ impl ChunkingContext for NodeJsChunkingContext {
 
     #[turbo_tasks::function]
     async fn async_loader_chunk_item_id(
-        self: Vc<Self>,
+        &self,
         module: Vc<Box<dyn ChunkableModule>>,
     ) -> Result<Vc<ModuleId>> {
-        Ok(if self.await?.manifest_chunks {
-            self.chunk_item_id_from_ident(ManifestLoaderChunkItem::asset_ident_for(module))
+        let ident = if self.manifest_chunks {
+            ManifestLoaderChunkItem::asset_ident_for(module)
         } else {
-            self.chunk_item_id_from_ident(AsyncLoaderModule::asset_ident_for(module))
-        })
+            AsyncLoaderModule::asset_ident_for(module)
+        };
+        Ok(self.module_id_strategy.get_module_id(ident.owned().await?))
     }
 
     #[turbo_tasks::function]

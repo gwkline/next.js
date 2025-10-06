@@ -22,9 +22,13 @@ use swc_core::{
         visit::{Visit, VisitMutWith, VisitWith, noop_visit_type},
     },
 };
-use tracing::{Instrument, instrument};
+use tracing::{
+    Instrument,
+    field::{self, display},
+    instrument,
+};
 use turbo_rcstr::{RcStr, rcstr};
-use turbo_tasks::{ResolvedVc, ValueToString, Vc, util::WrapFuture};
+use turbo_tasks::{ResolvedVc, Vc, util::WrapFuture};
 use turbo_tasks_fs::{FileContent, FileSystemPath, rope::Rope};
 use turbo_tasks_hash::hash_xxh3_hash64;
 use turbopack_core::{
@@ -175,11 +179,13 @@ pub async fn parse(
     transforms: ResolvedVc<EcmascriptInputTransforms>,
     is_external_tracing: bool,
 ) -> Result<Vc<ParseResult>> {
-    let span = tracing::info_span!(
-        "parse ecmascript",
-        name = display(source.ident().to_string().await?),
-        ty = display(&ty)
-    );
+    let span = tracing::info_span!("parse ecmascript", name = field::Empty, ty = display(&ty));
+    if !span.is_disabled() {
+        span.record(
+            "name",
+            display(source.ident().await?.value_to_string().await?),
+        );
+    }
 
     match parse_internal(
         source,
@@ -193,7 +199,7 @@ pub async fn parse(
         Ok(result) => Ok(result),
         Err(error) => Err(error.context(format!(
             "failed to parse {}",
-            source.ident().to_string().await?
+            source.ident().await?.value_to_string().await?
         ))),
     }
 }
@@ -206,8 +212,8 @@ async fn parse_internal(
 ) -> Result<Vc<ParseResult>> {
     let content = source.content();
     let fs_path = source.ident().path().await?;
-    let ident = &*source.ident().to_string().await?;
-    let file_path_hash = hash_xxh3_hash64(&*source.ident().to_string().await?) as u128;
+    let ident = &*source.ident().await?.value_to_string().await?;
+    let file_path_hash = hash_xxh3_hash64(&*source.ident().await?.value_to_string().await?) as u128;
     let content = match content.await {
         Ok(content) => content,
         Err(error) => {
@@ -254,7 +260,7 @@ async fn parse_internal(
                             Err(e) => {
                                 return Err(e).context(anyhow!(
                                     "Transforming and/or parsing of {} failed",
-                                    source.ident().to_string().await?
+                                    source.ident().await?.value_to_string().await?
                                 ));
                             }
                         }
@@ -473,7 +479,7 @@ async fn parse_file_content(
                 .await?;
 
             if parser_handler.has_errors() {
-                let messages = if let Some(error) = collector_parse.last_emitted_issue() {
+                let messages = if let Some(error) = collector_parse.last_emitted_issue().await? {
                     // The emitter created in here only uses StyledString::Text
                     if let StyledString::Text(xx) = &*error.await?.message.await? {
                         Some(vec![xx.clone()])

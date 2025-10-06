@@ -23,7 +23,7 @@ enum PathType {
     },
     FromIdent {
         chunking_context: ResolvedVc<Box<dyn ChunkingContext>>,
-        ident_for_path: ResolvedVc<AssetIdent>,
+        ident_for_path: AssetIdent,
     },
 }
 
@@ -39,7 +39,7 @@ impl SourceMapAsset {
     #[turbo_tasks::function]
     pub fn new(
         chunking_context: ResolvedVc<Box<dyn ChunkingContext>>,
-        ident_for_path: ResolvedVc<AssetIdent>,
+        ident_for_path: AssetIdent,
         generate_source_map: ResolvedVc<Box<dyn GenerateSourceMap>>,
     ) -> Vc<Self> {
         SourceMapAsset {
@@ -79,7 +79,7 @@ impl OutputAsset for SourceMapAsset {
             } => chunking_context
                 .chunk_path(
                     Some(Vc::upcast(self)),
-                    **ident_for_path,
+                    ident_for_path.clone(),
                     None,
                     rcstr!(".js"),
                 )

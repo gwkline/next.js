@@ -13,7 +13,7 @@ use swc_core::{
     },
 };
 use turbo_rcstr::RcStr;
-use turbo_tasks::{FxIndexSet, ResolvedVc, ValueToString, Vc};
+use turbo_tasks::{FxIndexSet, ResolvedVc, Vc};
 use turbopack_core::{ident::AssetIdent, resolve::ModulePart, source::Source};
 
 use self::graph::{DepGraph, ItemData, ItemId, ItemIdGroupKind, Mode, SplitModuleResult};
@@ -438,10 +438,12 @@ async fn get_part_id(result: &SplitResult, part: &ModulePart) -> Result<u32> {
     )
 }
 
+// The failure case is very rare, so we allow the large enum variant
+#[allow(clippy::large_enum_variant)]
 #[turbo_tasks::value(shared, serialization = "none", eq = "manual")]
 pub(crate) enum SplitResult {
     Ok {
-        asset_ident: ResolvedVc<AssetIdent>,
+        asset_ident: AssetIdent,
 
         /// `u32` is a index to `modules`.
         #[turbo_tasks(trace_ignore)]
@@ -473,9 +475,9 @@ impl PartialEq for SplitResult {
 #[turbo_tasks::function]
 pub(super) async fn split_module(asset: Vc<EcmascriptModuleAsset>) -> Result<Vc<SplitResult>> {
     let parsed: ResolvedVc<ParseResult> = asset.failsafe_parse().to_resolved().await?;
-    let ident = asset.source().ident().to_resolved().await?;
+    let ident = asset.source().ident().owned().await?;
     // Do not split already split module
-    if !ident.await?.parts.is_empty() {
+    if !ident.parts.is_empty() {
         return Ok(SplitResult::Failed {
             parse_result: parsed,
         }
@@ -484,8 +486,7 @@ pub(super) async fn split_module(asset: Vc<EcmascriptModuleAsset>) -> Result<Vc<
 
     // Turbopack has a bug related to parsing of CJS files where the package.json has
     // a `"type": "module"` and the file is a CJS file.
-    let name = ident.to_string().await?;
-    if name.ends_with(".cjs") {
+    if ident.path.path.ends_with(".cjs") {
         return Ok(SplitResult::Failed {
             parse_result: parsed,
         }
@@ -718,7 +719,7 @@ pub(crate) async fn part_of_module(
                 bail!(
                     "part_id is out of range: {part_id} >= {}; asset = {}; entrypoints = \
                      {entrypoints:?}: part_deps = {deps:?}",
-                    asset_ident.to_string().await?,
+                    asset_ident.value_to_string().await?,
                     modules.len(),
                 );
             }

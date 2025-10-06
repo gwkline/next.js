@@ -5,7 +5,7 @@ use either::Either;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use tracing::Level;
-use turbo_tasks::{FxIndexMap, ResolvedVc, TryJoinIterExt, ValueToString};
+use turbo_tasks::{FxIndexMap, ResolvedVc, TryJoinIterExt};
 
 use crate::chunk::{
     ChunkItem, ChunkItemWithAsyncModuleInfo, ChunkType, ChunkingContext,
@@ -59,11 +59,17 @@ pub async fn expand_batches(
                                 *item.chunk_item,
                                 item.async_info.map(|i| *i),
                             );
-                            let asset_ident = item.chunk_item.asset_ident().to_string();
+                            let asset_ident = item
+                                .chunk_item
+                                .asset_ident()
+                                .await?
+                                .value_to_string()
+                                .owned()
+                                .await?;
                             Ok(ChunkItemOrBatchWithInfo::ChunkItem {
                                 chunk_item: item.clone(),
                                 size: *size.await?,
-                                asset_ident: asset_ident.owned().await?,
+                                asset_ident,
                             })
                         })
                         .try_join()

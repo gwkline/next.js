@@ -55,13 +55,13 @@ impl ManifestAsyncModule {
     }
 
     #[turbo_tasks::function]
-    pub(super) fn chunk_group(&self) -> Vc<OutputAssetsWithReferenced> {
-        self.chunking_context.chunk_group_assets(
-            self.inner.ident(),
+    pub(super) async fn chunk_group(&self) -> Result<Vc<OutputAssetsWithReferenced>> {
+        Ok(self.chunking_context.chunk_group_assets(
+            self.inner.ident().owned().await?,
             ChunkGroup::Async(ResolvedVc::upcast(self.inner)),
             *self.module_graph,
             self.availability_info,
-        )
+        ))
     }
 
     #[turbo_tasks::function]
@@ -88,7 +88,7 @@ impl ManifestAsyncModule {
             }
         }
         Ok(this.chunking_context.chunk_group_assets(
-            self.ident(),
+            self.ident().owned().await?,
             ChunkGroup::Async(ResolvedVc::upcast(self)),
             *this.module_graph,
             this.availability_info,

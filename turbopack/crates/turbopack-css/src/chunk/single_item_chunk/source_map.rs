@@ -36,7 +36,7 @@ impl OutputAsset for SingleItemCssChunkSourceMapAsset {
             .chunking_context
             .chunk_path(
                 Some(Vc::upcast(self)),
-                this.chunk.ident_for_path(),
+                this.chunk.ident_for_path().owned().await?,
                 None,
                 rcstr!(".single.css"),
             )

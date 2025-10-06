@@ -34,7 +34,7 @@ use turbopack_ecmascript::{
 /// a client or SSR asset.
 #[turbo_tasks::value]
 pub struct EcmascriptClientReferenceModule {
-    pub server_ident: ResolvedVc<AssetIdent>,
+    pub server_ident: AssetIdent,
     server_asset_context: ResolvedVc<Box<dyn AssetContext>>,
     pub client_module: ResolvedVc<Box<dyn EcmascriptChunkPlaceable>>,
     pub ssr_module: ResolvedVc<Box<dyn EcmascriptChunkPlaceable>>,
@@ -52,7 +52,7 @@ impl EcmascriptClientReferenceModule {
     /// * `ssr_module` - The SSR module.
     #[turbo_tasks::function]
     pub fn new(
-        server_ident: ResolvedVc<AssetIdent>,
+        server_ident: AssetIdent,
         server_asset_context: ResolvedVc<Box<dyn AssetContext>>,
         client_module: ResolvedVc<Box<dyn EcmascriptChunkPlaceable>>,
         ssr_module: ResolvedVc<Box<dyn EcmascriptChunkPlaceable>>,
@@ -71,7 +71,7 @@ impl EcmascriptClientReferenceModule {
         let mut code = CodeBuilder::default();
         let is_esm: bool;
 
-        let server_module_path = &*self.server_ident.to_string().await?;
+        let server_module_path = &*self.server_ident.value_to_string().await?;
 
         // Adapted from https://github.com/facebook/react/blob/c5b9375767e2c4102d7e5559d383523736f1c902/packages/react-server-dom-webpack/src/ReactFlightWebpackNodeLoader.js#L323-L354
         if let EcmascriptExports::EsmExports(exports) = &*self.client_module.get_exports().await? {
@@ -150,7 +150,7 @@ impl EcmascriptClientReferenceModule {
             AssetContent::file(File::from(code.source_code().clone()).into());
 
         let proxy_source = VirtualSource::new(
-            self.server_ident.path().await?.join(
+            self.server_ident.path.join(
                 // We choose the extension based on the original file because we're placing the
                 // virtual module next to the original code, so its parsing will be
                 // affected by `type` fields in package.json -- a bare `proxy.js`
@@ -190,7 +190,7 @@ pub fn ecmascript_client_reference_merge_tag_ssr() -> RcStr {
 impl Module for EcmascriptClientReferenceModule {
     #[turbo_tasks::function]
     async fn ident(&self) -> Result<Vc<AssetIdent>> {
-        let mut ident = self.server_ident.owned().await?;
+        let mut ident = self.server_ident.clone();
         ident.add_modifier(rcstr!("client reference proxy"));
         ident.layer = Some(self.server_asset_context.into_trait_ref().await?.layer());
         Ok(ident.cell())

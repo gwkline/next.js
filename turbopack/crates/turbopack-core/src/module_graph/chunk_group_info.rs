@@ -12,8 +12,8 @@ use serde::{Deserialize, Serialize};
 use tracing::Instrument;
 use turbo_rcstr::RcStr;
 use turbo_tasks::{
-    FxIndexMap, FxIndexSet, NonLocalValue, ResolvedVc, TaskInput, TryJoinIterExt, ValueToString,
-    Vc, debug::ValueDebugFormat, trace::TraceRawVcs,
+    FxIndexMap, FxIndexSet, NonLocalValue, ResolvedVc, TaskInput, TryJoinIterExt, Vc,
+    debug::ValueDebugFormat, trace::TraceRawVcs,
 };
 
 use crate::{
@@ -212,21 +212,27 @@ impl ChunkGroup {
                 "ChunkGroup::Entry({:?})",
                 entries
                     .iter()
-                    .map(|m| m.ident().to_string())
+                    .map(|m| async { m.ident().await?.value_to_string().owned().await })
                     .try_join()
                     .await?
             ),
             ChunkGroup::Async(entry) => {
-                format!("ChunkGroup::Async({:?})", entry.ident().to_string().await?)
+                format!(
+                    "ChunkGroup::Async({:?})",
+                    entry.ident().await?.value_to_string().owned().await?
+                )
             }
             ChunkGroup::Isolated(entry) => {
                 format!(
                     "ChunkGroup::Isolated({:?})",
-                    entry.ident().to_string().await?
+                    entry.ident().await?.value_to_string().owned().await?
                 )
             }
             ChunkGroup::Shared(entry) => {
-                format!("ChunkGroup::Shared({:?})", entry.ident().to_string().await?)
+                format!(
+                    "ChunkGroup::Shared({:?})",
+                    entry.ident().await?.value_to_string().owned().await?
+                )
             }
             ChunkGroup::IsolatedMerged {
                 parent,
@@ -240,7 +246,7 @@ impl ChunkGroup {
                     merge_tag,
                     entries
                         .iter()
-                        .map(|m| m.ident().to_string())
+                        .map(|m| async { m.ident().await?.value_to_string().owned().await })
                         .try_join()
                         .await?
                 )
@@ -257,7 +263,7 @@ impl ChunkGroup {
                     merge_tag,
                     entries
                         .iter()
-                        .map(|m| m.ident().to_string())
+                        .map(|m| async { m.ident().await?.value_to_string().owned().await })
                         .try_join()
                         .await?
                 )
@@ -298,15 +304,21 @@ impl ChunkGroupKey {
                 "Entry({:?})",
                 entries
                     .iter()
-                    .map(|m| m.ident().to_string())
+                    .map(|m| async { m.ident().await?.value_to_string().await })
                     .try_join()
                     .await?
             ),
             ChunkGroupKey::Async(module) => {
-                format!("Async({:?})", module.ident().to_string().await?)
+                format!(
+                    "Async({:?})",
+                    module.ident().await?.value_to_string().await?
+                )
             }
             ChunkGroupKey::Isolated(module) => {
-                format!("Isolated({:?})", module.ident().to_string().await?)
+                format!(
+                    "Isolated({:?})",
+                    module.ident().await?.value_to_string().await?
+                )
             }
             ChunkGroupKey::IsolatedMerged { parent, merge_tag } => {
                 format!(
@@ -316,7 +328,10 @@ impl ChunkGroupKey {
                 )
             }
             ChunkGroupKey::Shared(module) => {
-                format!("Shared({:?})", module.ident().to_string().await?)
+                format!(
+                    "Shared({:?})",
+                    module.ident().await?.value_to_string().await?
+                )
             }
             ChunkGroupKey::SharedMerged { parent, merge_tag } => {
                 format!(
@@ -706,7 +721,7 @@ pub async fn compute_chunk_group_info(graph: &ModuleGraphRef) -> Result<Vc<Chunk
                         buckets
                             .entry(key.iter().collect::<Vec<_>>())
                             .or_insert(BTreeSet::new())
-                            .insert(module.ident().to_string().await?);
+                            .insert(module.ident().await?.value_to_string().owned().await?);
                     }
                 }
 

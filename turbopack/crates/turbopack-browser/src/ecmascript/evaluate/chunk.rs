@@ -38,7 +38,7 @@ use crate::{
 #[turbo_tasks::value(shared)]
 pub(crate) struct EcmascriptBrowserEvaluateChunk {
     chunking_context: ResolvedVc<BrowserChunkingContext>,
-    ident: ResolvedVc<AssetIdent>,
+    ident: AssetIdent,
     other_chunks: ResolvedVc<OutputAssets>,
     evaluatable_assets: ResolvedVc<EvaluatableAssets>,
     // TODO(sokra): It's weird to use ModuleGraph here, we should convert evaluatable_assets to a
@@ -52,7 +52,7 @@ impl EcmascriptBrowserEvaluateChunk {
     #[turbo_tasks::function]
     pub fn new(
         chunking_context: ResolvedVc<BrowserChunkingContext>,
-        ident: ResolvedVc<AssetIdent>,
+        ident: AssetIdent,
         other_chunks: ResolvedVc<OutputAssets>,
         evaluatable_assets: ResolvedVc<EvaluatableAssets>,
         module_graph: ResolvedVc<ModuleGraph>,
@@ -202,7 +202,7 @@ impl EcmascriptBrowserEvaluateChunk {
 
     #[turbo_tasks::function]
     async fn ident_for_path(&self) -> Result<Vc<AssetIdent>> {
-        let mut ident = self.ident.owned().await?;
+        let mut ident = self.ident.clone();
 
         ident.add_modifier(rcstr!("ecmascript browser evaluate chunk"));
 
@@ -210,7 +210,7 @@ impl EcmascriptBrowserEvaluateChunk {
         ident.modifiers.extend(
             evaluatable_assets
                 .iter()
-                .map(|entry| entry.ident().to_string().owned())
+                .map(async |entry| entry.ident().await?.value_to_string().owned().await)
                 .try_join()
                 .await?,
         );
@@ -232,7 +232,7 @@ impl EcmascriptBrowserEvaluateChunk {
         let this = self.await?;
         Ok(SourceMapAsset::new(
             Vc::upcast(*this.chunking_context),
-            self.ident_for_path(),
+            self.ident_for_path().owned().await?,
             Vc::upcast(self),
         ))
     }
@@ -251,7 +251,7 @@ impl OutputAsset for EcmascriptBrowserEvaluateChunk {
     #[turbo_tasks::function]
     async fn path(self: Vc<Self>) -> Result<Vc<FileSystemPath>> {
         let this = self.await?;
-        let ident = self.ident_for_path();
+        let ident = self.ident_for_path().owned().await?;
         Ok(this.chunking_context.chunk_path(
             Some(Vc::upcast(self)),
             ident,

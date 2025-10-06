@@ -30,8 +30,8 @@ use serde::{Deserialize, Serialize};
 use tracing::Instrument;
 use turbo_rcstr::{RcStr, rcstr};
 use turbo_tasks::{
-    Completion, FxIndexMap, NonLocalValue, ResolvedVc, TaskInput, ValueToString, Vc, fxindexmap,
-    fxindexset, trace::TraceRawVcs,
+    Completion, FxIndexMap, NonLocalValue, ResolvedVc, TaskInput, Vc, fxindexmap, fxindexset,
+    trace::TraceRawVcs,
 };
 use turbo_tasks_fs::{
     self, File, FileContent, FileSystem, FileSystemPath, FileSystemPathOption, VirtualFileSystem,
@@ -677,7 +677,7 @@ impl PageEndpoint {
         ) && let Some(chunkable) = Vc::try_resolve_downcast(page_loader).await?
         {
             return Ok(Vc::upcast(HmrEntryModule::new(
-                AssetIdent::from_path(this.page.await?.base_path.clone()).cell(),
+                AssetIdent::from_path(this.page.await?.base_path.clone()),
                 chunkable,
             )));
         }
@@ -777,7 +777,7 @@ impl PageEndpoint {
                 .map(|m| ResolvedVc::upcast(*m))
                 .collect();
             let client_chunk_group = client_chunking_context.evaluated_chunk_group(
-                AssetIdent::from_path(this.page.await?.base_path.clone()).cell(),
+                AssetIdent::from_path(this.page.await?.base_path.clone()),
                 ChunkGroup::Entry(evaluatable_assets),
                 module_graph,
                 AvailabilityInfo::Root,
@@ -1008,7 +1008,7 @@ impl PageEndpoint {
             for layout in [document_module, app_module].iter().flatten().copied() {
                 let span = tracing::trace_span!(
                     "layout segment",
-                    name = display(layout.ident().to_string().await?)
+                    name = display(layout.ident().await?.value_to_string().owned().await?)
                 );
                 async {
                     let ChunkGroupResult {
@@ -1017,7 +1017,7 @@ impl PageEndpoint {
                         availability_info,
                     } = *chunking_context
                         .chunk_group(
-                            layout.ident(),
+                            layout.ident().owned().await?,
                             ChunkGroup::Shared(layout),
                             ssr_module_graph,
                             current_availability_info,
@@ -1046,7 +1046,7 @@ impl PageEndpoint {
                     referenced_assets: edge_referenced_assets,
                 } = *edge_chunking_context
                     .evaluated_chunk_group_assets(
-                        ssr_module.ident(),
+                        ssr_module.ident().owned().await?,
                         ChunkGroup::Entry(vec![ResolvedVc::upcast(ssr_module_evaluatable)]),
                         ssr_module_graph,
                         current_availability_info,

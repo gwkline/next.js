@@ -488,7 +488,7 @@ impl ValueToString for ResolveResult {
             write!(result, "{request} -> ").unwrap();
             match item {
                 ResolveResultItem::Source(a) => {
-                    result.push_str(&a.ident().to_string().await?);
+                    result.push_str(&a.ident().await?.value_to_string().await?);
                 }
                 ResolveResultItem::External {
                     name: s,
@@ -520,7 +520,7 @@ impl ValueToString for ResolveResult {
                 if i > 0 {
                     result.push_str(", ");
                 }
-                result.push_str(&source.ident().to_string().await?);
+                result.push_str(&source.ident().await?.value_to_string().await?);
             }
             result.push(')');
         }

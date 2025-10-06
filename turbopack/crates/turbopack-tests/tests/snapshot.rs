@@ -509,7 +509,7 @@ async fn run_test_operation(resource: RcStr) -> Result<Vc<FileSystemPath>> {
     // TODO: Load runtime entries from snapshots
     let chunks = match options.runtime {
         Runtime::Browser => chunking_context.evaluated_chunk_group_assets(
-            entry_module.ident(),
+            entry_module.ident().owned().await?,
             ChunkGroup::Entry(entry_modules.into_iter().collect()),
             module_graph,
             AvailabilityInfo::Root,

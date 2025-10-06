@@ -6,8 +6,8 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use serde::{Deserialize, Serialize};
 use turbo_rcstr::RcStr;
 use turbo_tasks::{
-    FxIndexMap, FxIndexSet, NonLocalValue, ResolvedVc, TaskInput, TryJoinIterExt, ValueToString,
-    Vc, trace::TraceRawVcs,
+    FxIndexMap, FxIndexSet, NonLocalValue, ResolvedVc, TaskInput, TryJoinIterExt, Vc,
+    trace::TraceRawVcs,
 };
 
 use crate::{
@@ -133,8 +133,10 @@ pub async fn compute_style_groups(
                         ResolvedVc::try_sidecast::<Box<dyn StyleModule>>(module)
                     {
                         let style_type = *style_module.style_type().await?;
-                        let mut info =
-                            ModuleInfo::new(style_type, module.ident().to_string().owned().await?);
+                        let mut info = ModuleInfo::new(
+                            style_type,
+                            module.ident().await?.value_to_string().owned().await?,
+                        );
                         info.chunk_group_indices.insert(idx, styles.len());
                         info.index_sum += styles.len();
                         styles.insert(module);

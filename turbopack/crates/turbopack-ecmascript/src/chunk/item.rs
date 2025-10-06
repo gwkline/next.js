@@ -5,8 +5,7 @@ use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 use turbo_rcstr::rcstr;
 use turbo_tasks::{
-    NonLocalValue, ResolvedVc, TaskInput, TryJoinIterExt, Upcast, ValueToString, Vc,
-    trace::TraceRawVcs,
+    NonLocalValue, ResolvedVc, TaskInput, TryJoinIterExt, Upcast, Vc, trace::TraceRawVcs,
 };
 use turbo_tasks_fs::{FileSystemPath, rope::Rope};
 use turbopack_core::{
@@ -232,7 +231,10 @@ async fn module_factory_with_code_generation_issue(
     Ok(match content {
         Ok(factory) => *factory,
         Err(error) => {
-            let id = chunk_item.asset_ident().to_string().await;
+            let id = match chunk_item.asset_ident().await {
+                Ok(id) => id.value_to_string().await,
+                Err(err) => Err(err),
+            };
             let id = id.as_ref().map_or_else(|_| "unknown", |id| &**id);
             let error = error.context(format!(
                 "An error occurred while generating the chunk item {id}"

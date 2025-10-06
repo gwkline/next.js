@@ -90,7 +90,7 @@ impl CssChunk {
                 &*this.chunking_context.minify_type().await?,
                 MinifyType::NoMinify
             ) {
-                let id = css_item.asset_ident().to_string().await?;
+                let id = css_item.asset_ident().await?.value_to_string().await?;
                 writeln!(body, "/* {id} */")?;
             }
 
@@ -327,7 +327,7 @@ impl OutputAsset for CssChunk {
 
         Ok(self.await?.chunking_context.chunk_path(
             Some(Vc::upcast(self)),
-            ident,
+            ident.owned().await?,
             None,
             rcstr!(".css"),
         ))
@@ -440,7 +440,11 @@ impl Introspectable for CssChunk {
         let chunk_content = this.content.await?;
         details += "Chunk items:\n\n";
         for item in chunk_content.chunk_items.iter() {
-            writeln!(details, "- {}", item.asset_ident().to_string().await?)?;
+            writeln!(
+                details,
+                "- {}",
+                item.asset_ident().await?.value_to_string().await?
+            )?;
         }
         details += "\nContent:\n\n";
         write!(details, "{}", content.await?)?;

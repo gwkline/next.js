@@ -139,9 +139,8 @@ impl PageLoaderAsset {
 
         Ok(ChunkData::from_assets(self.server_root.clone(), *chunks))
     }
-}
 
-impl PageLoaderAsset {
+    #[turbo_tasks::function]
     async fn ident_for_path(&self) -> Result<Vc<AssetIdent>> {
         let rebase_prefix_path = self.rebase_prefix_path.await?;
         let root = rebase_prefix_path.as_ref().unwrap_or(&self.server_root);
@@ -159,13 +158,13 @@ impl OutputAsset for PageLoaderAsset {
     #[turbo_tasks::function]
     async fn path(self: Vc<Self>) -> Result<Vc<FileSystemPath>> {
         let this = self.await?;
-        let ident = this.ident_for_path().await?;
+        let ident = self.ident_for_path().owned().await?;
         if this.use_fixed_path {
             // In development mode, don't include a content hash and put the chunk at e.g.
             // `static/chunks/pages/page2.js`, so that the dev runtime can request it at a known
             // path.
             // https://github.com/vercel/next.js/blob/84873e00874e096e6c4951dcf070e8219ed414e5/packages/next/src/client/route-loader.ts#L256-L271
-            Ok(ident.path().await?.cell())
+            Ok(ident.path.cell())
         } else {
             Ok(this
                 .chunking_context

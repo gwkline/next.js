@@ -44,7 +44,7 @@ impl OutputAsset for StaticOutputAsset {
         let content_hash_b16 = turbo_tasks_hash::encode_hex(content_hash);
         Ok(self
             .chunking_context
-            .asset_path(content_hash_b16.into(), self.source.ident()))
+            .asset_path(content_hash_b16.into(), self.source.ident().owned().await?))
     }
 }
 

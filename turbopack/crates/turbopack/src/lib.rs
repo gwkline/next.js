@@ -25,7 +25,7 @@ use graph::{AggregatedGraph, AggregatedGraphNodeContent, aggregate};
 use module_options::{ModuleOptions, ModuleOptionsContext, ModuleRuleEffect, ModuleType};
 use tracing::{Instrument, field::Empty};
 use turbo_rcstr::{RcStr, rcstr};
-use turbo_tasks::{ResolvedVc, ValueToString, Vc};
+use turbo_tasks::{ResolvedVc, Vc};
 use turbo_tasks_fs::{
     FileSystemPath,
     glob::{Glob, GlobOptions},
@@ -481,12 +481,16 @@ async fn process_default(
 ) -> Result<Vc<ProcessResult>> {
     let span = tracing::info_span!(
         "process module",
-        name = %source.ident().to_string().await?,
+        name = Empty,
         layer = Empty,
         reference_type = display(&reference_type)
     );
     if !span.is_disabled() {
         // You can't await multiple times in the span macro call parameters.
+        span.record(
+            "name",
+            source.ident().await?.value_to_string().await?.as_str(),
+        );
         span.record("layer", module_asset_context.await?.layer.name().as_str());
     }
 
@@ -506,8 +510,8 @@ async fn process_default_internal(
     reference_type: ReferenceType,
     processed_rules: Vec<usize>,
 ) -> Result<Vc<ProcessResult>> {
-    let ident = source.ident().to_resolved().await?;
-    let path_ref = ident.path().await?;
+    let ident = source.ident().await?;
+    let path_ref = &ident.path;
     let options = ModuleOptions::new(
         path_ref.parent(),
         module_asset_context.module_options_context(),
@@ -548,7 +552,7 @@ async fn process_default_internal(
         if processed_rules.contains(&i) {
             continue;
         }
-        if rule.matches(source, &path_ref, &reference_type).await? {
+        if rule.matches(source, path_ref, &reference_type).await? {
             for effect in rule.effects() {
                 match effect {
                     ModuleRuleEffect::Ignore => {
@@ -557,7 +561,7 @@ async fn process_default_internal(
                     ModuleRuleEffect::SourceTransforms(transforms) => {
                         current_source =
                             transforms.transform(*current_source).to_resolved().await?;
-                        if current_source.ident().to_resolved().await? != ident {
+                        if current_source.ident().await? != ident {
                             // The ident has been changed, so we need to apply new rules.
                             if let Some(transition) = module_asset_context
                                 .await?
@@ -648,7 +652,7 @@ async fn process_default_internal(
                                     // returned by the CustomModuleType
                                     Err(_) => {
                                         ModuleIssue::new(
-                                            *ident,
+                                            (*ident).clone(),
                                             rcstr!("Invalid module type"),
                                             rcstr!(
                                                 "The custom module type didn't accept the \
@@ -665,7 +669,7 @@ async fn process_default_internal(
                             }
                             Some(module_type) => {
                                 ModuleIssue::new(
-                                    *ident,
+                                    (*ident).clone(),
                                     rcstr!("Invalid module type"),
                                     rcstr!(
                                         "The module type must be Ecmascript or Typescript to add \
@@ -680,7 +684,7 @@ async fn process_default_internal(
                             }
                             None => {
                                 ModuleIssue::new(
-                                    *ident,
+                                    (*ident).clone(),
                                     rcstr!("Missing module type"),
                                     rcstr!(
                                         "The module type effect must be applied before adding \

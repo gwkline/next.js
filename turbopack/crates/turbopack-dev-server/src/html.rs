@@ -151,7 +151,7 @@ impl DevHtmlAsset {
                         };
                     chunking_context
                         .evaluated_chunk_group_assets(
-                            chunkable_module.ident(),
+                            chunkable_module.ident().owned().await?,
                             ChunkGroup::Entry(
                                 runtime_entries
                                     .await?
@@ -166,7 +166,7 @@ impl DevHtmlAsset {
                 } else {
                     chunking_context
                         .root_chunk_group_assets(
-                            chunkable_module.ident(),
+                            chunkable_module.ident().owned().await?,
                             ChunkGroup::Entry(vec![ResolvedVc::upcast(chunkable_module)]),
                             *module_graph,
                         )

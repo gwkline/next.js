@@ -12,7 +12,7 @@ use crate::{
 
 #[turbo_tasks::value]
 pub struct ModuleIssue {
-    pub ident: ResolvedVc<AssetIdent>,
+    pub ident: AssetIdent,
     pub title: ResolvedVc<StyledString>,
     pub description: ResolvedVc<StyledString>,
     // TODO(PACK-4879): make this mandatory and drop `ident`
@@ -22,7 +22,7 @@ pub struct ModuleIssue {
 impl ModuleIssue {
     #[turbo_tasks::function]
     pub fn new(
-        ident: ResolvedVc<AssetIdent>,
+        ident: AssetIdent,
         title: RcStr,
         description: RcStr,
         source: Option<IssueSource>,
@@ -45,8 +45,8 @@ impl Issue for ModuleIssue {
     }
 
     #[turbo_tasks::function]
-    async fn file_path(&self) -> Result<Vc<FileSystemPath>> {
-        Ok(self.ident.path().await?.cell())
+    fn file_path(&self) -> Vc<FileSystemPath> {
+        self.ident.path.clone().cell()
     }
 
     #[turbo_tasks::function]
@@ -68,7 +68,7 @@ impl Issue for ModuleIssue {
 #[turbo_tasks::function]
 pub async fn emit_unknown_module_type_error(source: Vc<Box<dyn Source>>) -> Result<()> {
     ModuleIssue {
-        ident: source.ident().to_resolved().await?,
+        ident: source.ident().owned().await?,
         title: StyledString::Text(rcstr!("Unknown module type")).resolved_cell(),
         description: StyledString::Text(
             r"This module doesn't have an associated type. Use a known file extension, or register a loader for it.

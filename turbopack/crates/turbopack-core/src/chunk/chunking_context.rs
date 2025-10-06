@@ -1,4 +1,5 @@
 use anyhow::Result;
+use async_trait::async_trait;
 use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
 use turbo_rcstr::RcStr;
@@ -169,7 +170,7 @@ pub trait ChunkingContext {
     fn chunk_path(
         self: Vc<Self>,
         asset: Option<Vc<Box<dyn Asset>>>,
-        ident: Vc<AssetIdent>,
+        ident: AssetIdent,
         content_hashing_prefix: Option<RcStr>,
         extension: RcStr,
     ) -> Vc<FileSystemPath>;
@@ -191,7 +192,7 @@ pub trait ChunkingContext {
     fn asset_path(
         self: Vc<Self>,
         content_hash: RcStr,
-        original_asset_ident: Vc<AssetIdent>,
+        original_asset_ident: AssetIdent,
     ) -> Vc<FileSystemPath>;
 
     #[turbo_tasks::function]
@@ -249,7 +250,7 @@ pub trait ChunkingContext {
     #[turbo_tasks::function]
     fn chunk_group(
         self: Vc<Self>,
-        ident: Vc<AssetIdent>,
+        ident: AssetIdent,
         chunk_group: ChunkGroup,
         module_graph: Vc<ModuleGraph>,
         availability_info: AvailabilityInfo,
@@ -258,7 +259,7 @@ pub trait ChunkingContext {
     #[turbo_tasks::function]
     fn evaluated_chunk_group(
         self: Vc<Self>,
-        ident: Vc<AssetIdent>,
+        ident: AssetIdent,
         chunk_group: ChunkGroup,
         module_graph: Vc<ModuleGraph>,
         availability_info: AvailabilityInfo,
@@ -280,18 +281,21 @@ pub trait ChunkingContext {
     ) -> Result<Vc<EntryChunkGroupResult>>;
 
     #[turbo_tasks::function]
-    async fn chunk_item_id_from_ident(
-        self: Vc<Self>,
-        ident: Vc<AssetIdent>,
-    ) -> Result<Vc<ModuleId>>;
+    async fn chunk_item_id_from_ident(self: Vc<Self>, ident: AssetIdent) -> Result<Vc<ModuleId>>;
+
+    // TODO: these two methods shouldn't really be turbo tasks, but instead be part of the Extension
+    // trait.
 
     #[turbo_tasks::function]
-    fn chunk_item_id(self: Vc<Self>, module: Vc<Box<dyn ChunkItem>>) -> Vc<ModuleId> {
-        self.chunk_item_id_from_ident(module.asset_ident())
+    async fn chunk_item_id(self: Vc<Self>, module: Vc<Box<dyn ChunkItem>>) -> Result<Vc<ModuleId>> {
+        Ok(self.chunk_item_id_from_ident(module.asset_ident().owned().await?))
     }
     #[turbo_tasks::function]
-    fn chunk_item_id_from_module(self: Vc<Self>, module: Vc<Box<dyn Module>>) -> Vc<ModuleId> {
-        self.chunk_item_id_from_ident(module.ident())
+    async fn chunk_item_id_from_module(
+        self: Vc<Self>,
+        module: Vc<Box<dyn Module>>,
+    ) -> Result<Vc<ModuleId>> {
+        Ok(self.chunk_item_id_from_ident(module.ident().owned().await?))
     }
 
     #[turbo_tasks::function]
@@ -305,10 +309,11 @@ pub trait ChunkingContext {
     fn debug_ids_enabled(self: Vc<Self>) -> Vc<bool>;
 }
 
+#[async_trait]
 pub trait ChunkingContextExt {
     fn root_chunk_group(
         self: Vc<Self>,
-        ident: Vc<AssetIdent>,
+        ident: AssetIdent,
         chunk_group: ChunkGroup,
         module_graph: Vc<ModuleGraph>,
     ) -> Vc<ChunkGroupResult>
@@ -317,7 +322,7 @@ pub trait ChunkingContextExt {
 
     fn root_chunk_group_assets(
         self: Vc<Self>,
-        ident: Vc<AssetIdent>,
+        ident: AssetIdent,
         chunk_group: ChunkGroup,
         module_graph: Vc<ModuleGraph>,
     ) -> Vc<OutputAssetsWithReferenced>
@@ -326,7 +331,7 @@ pub trait ChunkingContextExt {
 
     fn evaluated_chunk_group_assets(
         self: Vc<Self>,
-        ident: Vc<AssetIdent>,
+        ident: AssetIdent,
         chunk_group: ChunkGroup,
         module_graph: Vc<ModuleGraph>,
         availability_info: AvailabilityInfo,
@@ -370,7 +375,7 @@ pub trait ChunkingContextExt {
 
     fn chunk_group_assets(
         self: Vc<Self>,
-        ident: Vc<AssetIdent>,
+        ident: AssetIdent,
         chunk_group: ChunkGroup,
         module_graph: Vc<ModuleGraph>,
         availability_info: AvailabilityInfo,
@@ -379,10 +384,11 @@ pub trait ChunkingContextExt {
         Self: Send;
 }
 
+#[async_trait]
 impl<T: ChunkingContext + Send + Upcast<Box<dyn ChunkingContext>>> ChunkingContextExt for T {
     fn root_chunk_group(
         self: Vc<Self>,
-        ident: Vc<AssetIdent>,
+        ident: AssetIdent,
         chunk_group: ChunkGroup,
         module_graph: Vc<ModuleGraph>,
     ) -> Vc<ChunkGroupResult> {
@@ -391,7 +397,7 @@ impl<T: ChunkingContext + Send + Upcast<Box<dyn ChunkingContext>>> ChunkingConte
 
     fn root_chunk_group_assets(
         self: Vc<Self>,
-        ident: Vc<AssetIdent>,
+        ident: AssetIdent,
         chunk_group: ChunkGroup,
         module_graph: Vc<ModuleGraph>,
     ) -> Vc<OutputAssetsWithReferenced> {
@@ -405,7 +411,7 @@ impl<T: ChunkingContext + Send + Upcast<Box<dyn ChunkingContext>>> ChunkingConte
 
     fn evaluated_chunk_group_assets(
         self: Vc<Self>,
-        ident: Vc<AssetIdent>,
+        ident: AssetIdent,
         chunk_group: ChunkGroup,
         module_graph: Vc<ModuleGraph>,
         availability_info: AvailabilityInfo,
@@ -478,7 +484,7 @@ impl<T: ChunkingContext + Send + Upcast<Box<dyn ChunkingContext>>> ChunkingConte
 
     fn chunk_group_assets(
         self: Vc<Self>,
-        ident: Vc<AssetIdent>,
+        ident: AssetIdent,
         chunk_group: ChunkGroup,
         module_graph: Vc<ModuleGraph>,
         availability_info: AvailabilityInfo,
@@ -496,7 +502,7 @@ impl<T: ChunkingContext + Send + Upcast<Box<dyn ChunkingContext>>> ChunkingConte
 #[turbo_tasks::function]
 async fn root_chunk_group_assets(
     chunking_context: Vc<Box<dyn ChunkingContext>>,
-    ident: Vc<AssetIdent>,
+    ident: AssetIdent,
     chunk_group: ChunkGroup,
     module_graph: Vc<ModuleGraph>,
 ) -> Result<Vc<OutputAssetsWithReferenced>> {
@@ -513,7 +519,7 @@ async fn root_chunk_group_assets(
 #[turbo_tasks::function]
 async fn evaluated_chunk_group_assets(
     chunking_context: Vc<Box<dyn ChunkingContext>>,
-    ident: Vc<AssetIdent>,
+    ident: AssetIdent,
     chunk_group: ChunkGroup,
     module_graph: Vc<ModuleGraph>,
     availability_info: AvailabilityInfo,
@@ -554,7 +560,7 @@ async fn entry_chunk_group_asset(
 #[turbo_tasks::function]
 async fn chunk_group_assets(
     chunking_context: Vc<Box<dyn ChunkingContext>>,
-    ident: Vc<AssetIdent>,
+    ident: AssetIdent,
     chunk_group: ChunkGroup,
     module_graph: Vc<ModuleGraph>,
     availability_info: AvailabilityInfo,

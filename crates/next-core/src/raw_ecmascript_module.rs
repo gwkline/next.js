@@ -6,7 +6,7 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use tracing::Instrument;
 use turbo_rcstr::rcstr;
-use turbo_tasks::{FxIndexMap, FxIndexSet, ResolvedVc, TryJoinIterExt, ValueToString, Vc};
+use turbo_tasks::{FxIndexMap, FxIndexSet, ResolvedVc, TryJoinIterExt, Vc};
 use turbo_tasks_fs::{FileContent, glob::Glob, rope::Rope};
 use turbopack::{ModuleAssetContext, module_options::CustomModuleType};
 use turbopack_core::{
@@ -171,7 +171,7 @@ impl EcmascriptChunkItem for RawEcmascriptChunkItem {
     async fn content(&self) -> Result<Vc<EcmascriptChunkItemContent>> {
         let span = tracing::info_span!(
             "code generation raw module",
-            name = display(self.module.ident().to_string().await?)
+            name = display(self.module.ident().await?.value_to_string().await?)
         );
 
         async {

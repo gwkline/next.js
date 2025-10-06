@@ -190,7 +190,7 @@ impl NextSegmentConfig {
 /// An issue that occurred while parsing the app segment config.
 #[turbo_tasks::value(shared)]
 pub struct NextSegmentConfigParsingIssue {
-    ident: ResolvedVc<AssetIdent>,
+    ident: AssetIdent,
     key: RcStr,
     error: RcStr,
     detail: Option<ResolvedVc<StyledString>>,
@@ -202,7 +202,7 @@ pub struct NextSegmentConfigParsingIssue {
 impl NextSegmentConfigParsingIssue {
     #[turbo_tasks::function]
     pub fn new(
-        ident: ResolvedVc<AssetIdent>,
+        ident: AssetIdent,
         key: RcStr,
         error: RcStr,
         detail: Option<ResolvedVc<StyledString>>,
@@ -249,7 +249,7 @@ impl Issue for NextSegmentConfigParsingIssue {
 
     #[turbo_tasks::function]
     async fn file_path(&self) -> Result<Vc<FileSystemPath>> {
-        Ok(self.ident.path().await?.cell())
+        Ok(self.ident.path.clone().cell())
     }
 
     #[turbo_tasks::function]
@@ -548,7 +548,7 @@ async fn invalid_config(
     };
 
     NextSegmentConfigParsingIssue::new(
-        source.ident(),
+        source.ident().owned().await?,
         key.into(),
         error,
         detail,

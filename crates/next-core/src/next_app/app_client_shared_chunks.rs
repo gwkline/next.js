@@ -12,7 +12,7 @@ use turbopack_core::{
 
 #[turbo_tasks::function]
 pub async fn get_app_client_shared_chunk_group(
-    ident: Vc<AssetIdent>,
+    ident: AssetIdent,
     app_client_runtime_entries: Vc<EvaluatableAssets>,
     module_graph: Vc<ModuleGraph>,
     client_chunking_context: Vc<Box<dyn ChunkingContext>>,

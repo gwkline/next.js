@@ -801,7 +801,9 @@ impl Issue for InvalidExport {
                     StyledString::Text(rcstr!("The export ")),
                     StyledString::Code(self.export.clone()),
                     StyledString::Text(rcstr!(" was not found in module ")),
-                    StyledString::Strong(self.module.ident().to_string().owned().await?),
+                    StyledString::Strong(
+                        self.module.ident().await?.value_to_string().owned().await?,
+                    ),
                     StyledString::Text(rcstr!(".")),
                 ]),
                 if let Some(did_you_mean) = did_you_mean {
@@ -890,7 +892,9 @@ impl Issue for CircularReExport {
                 StyledString::Line(vec![
                     StyledString::Code(self.export.clone()),
                     StyledString::Text(rcstr!(" of module ")),
-                    StyledString::Strong(self.module.ident().to_string().owned().await?),
+                    StyledString::Strong(
+                        self.module.ident().await?.value_to_string().owned().await?,
+                    ),
                 ]),
                 StyledString::Line(vec![StyledString::Text(rcstr!(
                     "is a re-export of the export"
@@ -898,7 +902,14 @@ impl Issue for CircularReExport {
                 StyledString::Line(vec![
                     StyledString::Code(self.import.clone().unwrap_or_else(|| rcstr!("*"))),
                     StyledString::Text(rcstr!(" of module ")),
-                    StyledString::Strong(self.module_cycle.ident().to_string().owned().await?),
+                    StyledString::Strong(
+                        self.module_cycle
+                            .ident()
+                            .await?
+                            .value_to_string()
+                            .owned()
+                            .await?,
+                    ),
                     StyledString::Text(rcstr!(".")),
                 ]),
             ])

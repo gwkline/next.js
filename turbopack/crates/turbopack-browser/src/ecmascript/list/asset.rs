@@ -28,7 +28,7 @@ use crate::BrowserChunkingContext;
 #[turbo_tasks::value(shared)]
 pub(crate) struct EcmascriptDevChunkList {
     pub(super) chunking_context: ResolvedVc<BrowserChunkingContext>,
-    pub(super) ident: ResolvedVc<AssetIdent>,
+    pub(super) ident: AssetIdent,
     pub(super) evaluatable_assets: ResolvedVc<EvaluatableAssets>,
     pub(super) chunks: ResolvedVc<OutputAssets>,
     pub(super) source: EcmascriptDevChunkListSource,
@@ -40,7 +40,7 @@ impl EcmascriptDevChunkList {
     #[turbo_tasks::function]
     pub fn new(
         chunking_context: ResolvedVc<BrowserChunkingContext>,
-        ident: ResolvedVc<AssetIdent>,
+        ident: AssetIdent,
         evaluatable_assets: ResolvedVc<EvaluatableAssets>,
         chunks: ResolvedVc<OutputAssets>,
         source: EcmascriptDevChunkListSource,
@@ -74,7 +74,7 @@ impl OutputAsset for EcmascriptDevChunkList {
     #[turbo_tasks::function]
     async fn path(self: Vc<Self>) -> Result<Vc<FileSystemPath>> {
         let this = self.await?;
-        let mut ident = this.ident.owned().await?;
+        let mut ident = this.ident.clone();
         ident.add_modifier(rcstr!("ecmascript dev chunk list"));
 
         match this.source {
@@ -87,8 +87,6 @@ impl OutputAsset for EcmascriptDevChunkList {
         // We must not include the actual chunks idents as part of the chunk list's
         // ident, because it must remain stable whenever a chunk is added or
         // removed from the list.
-
-        let ident = ident.cell();
         Ok(this
             .chunking_context
             .chunk_path(Some(Vc::upcast(self)), ident, None, rcstr!(".js")))

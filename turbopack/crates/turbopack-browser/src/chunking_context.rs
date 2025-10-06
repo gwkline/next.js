@@ -3,8 +3,7 @@ use serde::{Deserialize, Serialize};
 use tracing::Instrument;
 use turbo_rcstr::{RcStr, rcstr};
 use turbo_tasks::{
-    NonLocalValue, ResolvedVc, TaskInput, TryJoinIterExt, Upcast, ValueToString, Vc,
-    trace::TraceRawVcs,
+    NonLocalValue, ResolvedVc, TaskInput, TryJoinIterExt, Upcast, Vc, trace::TraceRawVcs,
 };
 use turbo_tasks_fs::FileSystemPath;
 use turbo_tasks_hash::{DeterministicHash, hash_xxh3_hash64};
@@ -307,7 +306,7 @@ impl BrowserChunkingContext {
     #[turbo_tasks::function]
     fn generate_evaluate_chunk(
         self: Vc<Self>,
-        ident: Vc<AssetIdent>,
+        ident: AssetIdent,
         other_chunks: Vc<OutputAssets>,
         evaluatable_assets: Vc<EvaluatableAssets>,
         // TODO(sokra) remove this argument and pass chunk items instead
@@ -325,7 +324,7 @@ impl BrowserChunkingContext {
     #[turbo_tasks::function]
     fn generate_chunk_list_register_chunk(
         self: Vc<Self>,
-        ident: Vc<AssetIdent>,
+        ident: AssetIdent,
         evaluatable_assets: Vc<EvaluatableAssets>,
         other_chunks: Vc<OutputAssets>,
         source: EcmascriptDevChunkListSource,
@@ -452,7 +451,7 @@ impl ChunkingContext for BrowserChunkingContext {
     async fn chunk_path(
         self: Vc<Self>,
         asset: Option<Vc<Box<dyn Asset>>>,
-        ident: Vc<AssetIdent>,
+        ident: AssetIdent,
         prefix: Option<RcStr>,
         extension: RcStr,
     ) -> Result<Vc<FileSystemPath>> {
@@ -469,7 +468,6 @@ impl ChunkingContext for BrowserChunkingContext {
             None => {
                 ident
                     .output_name(root_path.clone(), prefix, extension)
-                    .owned()
                     .await?
             }
             Some(ContentHashing::Direct { length }) => {
@@ -481,9 +479,9 @@ impl ChunkingContext for BrowserChunkingContext {
                     let hash = hash_xxh3_hash64(&file.await?);
                     let length = length as usize;
                     if let Some(prefix) = prefix {
-                        format!("{prefix}-{hash:0length$x}{extension}").into()
+                        format!("{prefix}-{hash:0length$x}{extension}")
                     } else {
-                        format!("{hash:0length$x}{extension}").into()
+                        format!("{hash:0length$x}{extension}")
                     }
                 } else {
                     bail!(
@@ -536,9 +534,9 @@ impl ChunkingContext for BrowserChunkingContext {
     async fn asset_path(
         &self,
         content_hash: RcStr,
-        original_asset_ident: Vc<AssetIdent>,
+        original_asset_ident: AssetIdent,
     ) -> Result<Vc<FileSystemPath>> {
-        let source_path = original_asset_ident.path().await?;
+        let source_path = &original_asset_ident.path;
         let basename = source_path.file_name();
         let asset_path = match source_path.extension_ref() {
             Some(ext) => format!(
@@ -592,12 +590,12 @@ impl ChunkingContext for BrowserChunkingContext {
     #[turbo_tasks::function]
     async fn chunk_group(
         self: ResolvedVc<Self>,
-        ident: Vc<AssetIdent>,
+        ident: AssetIdent,
         chunk_group: ChunkGroup,
         module_graph: Vc<ModuleGraph>,
         availability_info: AvailabilityInfo,
     ) -> Result<Vc<ChunkGroupResult>> {
-        let span = tracing::info_span!("chunking", name = display(ident.to_string().await?));
+        let span = tracing::info_span!("chunking", name = display(ident.value_to_string().await?));
         async move {
             let this = self.await?;
             let entries = chunk_group.entries();
@@ -621,7 +619,7 @@ impl ChunkingContext for BrowserChunkingContext {
                 .await?;
 
             if this.enable_hot_module_replacement {
-                let mut ident = ident.owned().await?;
+                let mut ident = ident;
                 match input_availability_info {
                     AvailabilityInfo::Root => {}
                     AvailabilityInfo::Untracked => {
@@ -634,7 +632,7 @@ impl ChunkingContext for BrowserChunkingContext {
                 let other_assets = Vc::cell(assets.clone());
                 assets.push(
                     self.generate_chunk_list_register_chunk(
-                        ident.cell(),
+                        ident,
                         EvaluatableAssets::empty(),
                         other_assets,
                         EcmascriptDevChunkListSource::Dynamic,
@@ -658,14 +656,14 @@ impl ChunkingContext for BrowserChunkingContext {
     #[turbo_tasks::function]
     async fn evaluated_chunk_group(
         self: ResolvedVc<Self>,
-        ident: Vc<AssetIdent>,
+        ident: AssetIdent,
         chunk_group: ChunkGroup,
         module_graph: Vc<ModuleGraph>,
         input_availability_info: AvailabilityInfo,
     ) -> Result<Vc<ChunkGroupResult>> {
         let span = tracing::info_span!(
             "chunking",
-            name = display(ident.to_string().await?),
+            name = display(ident.value_to_string().await?),
             chunking_type = "evaluated",
         );
         async move {
@@ -702,7 +700,7 @@ impl ChunkingContext for BrowserChunkingContext {
             );
 
             if this.enable_hot_module_replacement {
-                let mut ident = ident.owned().await?;
+                let mut ident = ident.clone();
                 match input_availability_info {
                     AvailabilityInfo::Root => {}
                     AvailabilityInfo::Untracked => {
@@ -714,7 +712,7 @@ impl ChunkingContext for BrowserChunkingContext {
                 }
                 assets.push(
                     self.generate_chunk_list_register_chunk(
-                        ident.cell(),
+                        ident,
                         entries,
                         other_assets,
                         EcmascriptDevChunkListSource::Entry,
@@ -755,7 +753,7 @@ impl ChunkingContext for BrowserChunkingContext {
     }
 
     #[turbo_tasks::function]
-    fn chunk_item_id_from_ident(&self, ident: Vc<AssetIdent>) -> Vc<ModuleId> {
+    fn chunk_item_id_from_ident(&self, ident: AssetIdent) -> Vc<ModuleId> {
         self.module_id_strategy.get_module_id(ident)
     }
 
@@ -782,14 +780,15 @@ impl ChunkingContext for BrowserChunkingContext {
 
     #[turbo_tasks::function]
     async fn async_loader_chunk_item_id(
-        self: Vc<Self>,
+        &self,
         module: Vc<Box<dyn ChunkableModule>>,
     ) -> Result<Vc<ModuleId>> {
-        Ok(if self.await?.manifest_chunks {
-            self.chunk_item_id_from_ident(ManifestLoaderChunkItem::asset_ident_for(module))
+        let ident = if self.manifest_chunks {
+            ManifestLoaderChunkItem::asset_ident_for(module)
         } else {
-            self.chunk_item_id_from_ident(AsyncLoaderModule::asset_ident_for(module))
-        })
+            AsyncLoaderModule::asset_ident_for(module)
+        };
+        Ok(self.module_id_strategy.get_module_id(ident.owned().await?))
     }
 
     #[turbo_tasks::function]

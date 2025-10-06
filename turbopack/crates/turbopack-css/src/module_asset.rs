@@ -398,7 +398,12 @@ impl EcmascriptChunkItem for ModuleChunkItem {
             // displayed in dev tools.
             source_map: if source_map {
                 Some(generate_minimal_source_map(
-                    self.module.ident().to_string().await?.to_string(),
+                    self.module
+                        .ident()
+                        .await?
+                        .value_to_string()
+                        .await?
+                        .to_string(),
                     code,
                 )?)
             } else {

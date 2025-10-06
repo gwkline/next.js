@@ -2,7 +2,7 @@ use std::io::{Read, Write};
 
 use anyhow::{Result, bail};
 use turbo_rcstr::rcstr;
-use turbo_tasks::{ResolvedVc, ValueToString, Vc};
+use turbo_tasks::{ResolvedVc, Vc};
 use turbo_tasks_fs::{FileContent, glob::Glob, rope::RopeBuilder};
 use turbopack_core::{
     asset::{Asset, AssetContent},
@@ -145,7 +145,10 @@ var decode = Uint8Array.fromBase64 || function Uint8Array_fromBase64(base64) {
                 .into())
             }
             FileContent::NotFound => {
-                bail!("File not found: {}", self.module.ident().to_string().await?);
+                bail!(
+                    "File not found: {}",
+                    self.module.ident().await?.value_to_string().await?
+                );
             }
         }
     }

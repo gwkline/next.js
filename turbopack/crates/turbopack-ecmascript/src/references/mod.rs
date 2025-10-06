@@ -58,11 +58,11 @@ use swc_core::{
         },
     },
 };
-use tracing::Instrument;
+use tracing::{Instrument, field::display};
 use turbo_rcstr::{RcStr, rcstr};
 use turbo_tasks::{
     FxIndexMap, FxIndexSet, NonLocalValue, ReadRef, ResolvedVc, TaskInput, TryJoinIterExt, Upcast,
-    ValueToString, Vc, trace::TraceRawVcs,
+    Vc, trace::TraceRawVcs,
 };
 use turbo_tasks_fs::FileSystemPath;
 use turbopack_core::{
@@ -310,7 +310,7 @@ impl AnalyzeEcmascriptModuleResultBuilder {
         self.async_module = ResolvedVc::cell(Some(async_module));
     }
 
-    /// Set whether this module is side-efffect free according to a user-provided directive.
+    /// Set whether this module is side-effect free according to a user-provided directive.
     pub fn set_has_side_effect_free_directive(&mut self, value: bool) {
         self.has_side_effect_free_directive = value;
     }
@@ -491,10 +491,13 @@ pub async fn analyze_ecmascript_module(
     module: ResolvedVc<EcmascriptModuleAsset>,
     part: Option<ModulePart>,
 ) -> Result<Vc<AnalyzeEcmascriptModuleResult>> {
-    let span = tracing::info_span!(
-        "analyze ecmascript module",
-        name = display(module.ident().to_string().await?)
-    );
+    let span = tracing::info_span!("analyze ecmascript module", name = tracing::field::Empty);
+    if !span.is_disabled() {
+        span.record(
+            "name",
+            display(module.ident().await?.value_to_string().await?),
+        );
+    }
     let result = analyze_ecmascript_module_internal(module, part)
         .instrument(span)
         .await;
@@ -503,7 +506,7 @@ pub async fn analyze_ecmascript_module(
         Ok(result) => Ok(result),
         Err(err) => Err(err.context(format!(
             "failed to analyze ecmascript module '{}'",
-            module.ident().to_string().await?
+            module.ident().await?.value_to_string().await?
         ))),
     }
 }
@@ -949,7 +952,7 @@ async fn analyze_ecmascript_module_internal(
         } else if let Some(span) = top_level_await_span {
             AnalyzeIssue::new(
                 IssueSeverity::Error,
-                source.ident(),
+                source.ident().owned().await?,
                 Vc::cell(rcstr!("unexpected top level await")),
                 StyledString::Text(rcstr!("top level await is only supported in ESM modules."))
                     .cell(),

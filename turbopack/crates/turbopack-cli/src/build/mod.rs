@@ -439,8 +439,7 @@ async fn build_internal(
                                                         .unwrap(),
                                                 )?
                                                 .with_extension("entry.js"),
-                                        )
-                                        .cell(),
+                                        ),
                                         ChunkGroup::Entry(
                                             [ResolvedVc::upcast(ecmascript)].into_iter().collect(),
                                         ),

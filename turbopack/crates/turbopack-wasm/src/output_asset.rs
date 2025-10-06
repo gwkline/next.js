@@ -40,12 +40,9 @@ impl OutputAsset for WebAssemblyAsset {
         let this = self.await?;
         let mut ident = this.source.ident().owned().await?;
         ident.add_modifier(rcstr!("wasm"));
-        Ok(this.chunking_context.chunk_path(
-            Some(Vc::upcast(self)),
-            ident.cell(),
-            None,
-            rcstr!(".wasm"),
-        ))
+        Ok(this
+            .chunking_context
+            .chunk_path(Some(Vc::upcast(self)), ident, None, rcstr!(".wasm")))
     }
 }
 

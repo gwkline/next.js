@@ -17,8 +17,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{Instrument, Level, Span};
 use turbo_rcstr::RcStr;
 use turbo_tasks::{
-    CollectiblesSource, FxIndexMap, NonLocalValue, ReadRef, ResolvedVc, TryJoinIterExt,
-    ValueToString, Vc,
+    CollectiblesSource, FxIndexMap, NonLocalValue, ReadRef, ResolvedVc, TryJoinIterExt, Vc,
     debug::ValueDebugFormat,
     graph::{AdjacencyMap, GraphTraversal, Visit, VisitControlFlow},
     trace::TraceRawVcs,
@@ -360,7 +359,7 @@ impl SingleModuleGraph {
                 let mut duplicates = Vec::new();
                 let mut set = FxHashSet::default();
                 for &module in modules.keys() {
-                    let ident = module.ident().to_string().await?;
+                    let ident = module.ident().await?.value_to_string().owned().await?;
                     if !set.insert(ident.clone()) {
                         duplicates.push(ident)
                     }
@@ -1228,7 +1227,7 @@ impl ModuleGraphRef {
             .graphs
             .iter()
             .flat_map(|g| g.iter_nodes())
-            .map(async |n| Ok((n.module, n.module.ident().to_string().await?)))
+            .map(async |n| Ok((n.module, n.module.ident().await?.value_to_string().await?)))
             .try_join()
             .await?
             .into_iter()
@@ -1701,7 +1700,7 @@ impl SingleModuleGraphBuilderNode {
             module,
             ident: if emit_spans {
                 // INVALIDATION: we don't need to invalidate when the span name changes
-                Some(ident.to_string().untracked().await?)
+                Some(ident.await?.value_to_string().await?)
             } else {
                 None
             },
@@ -1806,7 +1805,9 @@ impl Visit<(SingleModuleGraphBuilderNode, ExportUsage)> for SingleModuleGraphBui
                     let refs = match refs_cell.await {
                         Ok(refs) => refs,
                         Err(e) => {
-                            return Err(e.context(module.ident().to_string().await?));
+                            return Err(
+                                e.context(module.ident().await?.value_to_string().owned().await?)
+                            );
                         }
                     };
 

@@ -13,7 +13,7 @@ use std::fmt::Write;
 
 use anyhow::{Error, Result, bail};
 use turbo_rcstr::rcstr;
-use turbo_tasks::{ResolvedVc, ValueToString, Vc};
+use turbo_tasks::{ResolvedVc, Vc};
 use turbo_tasks_fs::{FileContent, FileJsonContent, glob::Glob};
 use turbopack_core::{
     asset::{Asset, AssetContent},
@@ -160,7 +160,7 @@ impl EcmascriptChunkItem for JsonChunkItem {
             FileJsonContent::NotFound => {
                 bail!(
                     "JSON file not found: {}",
-                    self.module.ident().to_string().await?
+                    self.module.ident().await?.value_to_string().await?
                 );
             }
         }

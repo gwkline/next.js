@@ -33,7 +33,7 @@ impl IssueCollector {
                 } else {
                     issue.severity
                 },
-                issue.source.ident(),
+                issue.source.ident().owned().await?,
                 Vc::cell(issue.title),
                 issue.message.cell(),
                 issue.code,
@@ -46,17 +46,22 @@ impl IssueCollector {
         Ok(())
     }
 
-    pub fn last_emitted_issue(&self) -> Option<Vc<AnalyzeIssue>> {
-        let inner = self.inner.lock();
-        inner.emitted_issues.last().map(|issue| {
-            AnalyzeIssue::new(
+    pub async fn last_emitted_issue(&self) -> Result<Option<Vc<AnalyzeIssue>>> {
+        let issue = {
+            let inner = self.inner.lock();
+            inner.emitted_issues.last().cloned()
+        };
+
+        Ok(match issue {
+            Some(issue) => Some(AnalyzeIssue::new(
                 issue.severity,
-                issue.source.ident(),
-                Vc::cell(issue.title.clone()),
-                issue.message.clone().cell(),
-                issue.code.clone(),
+                issue.source.ident().owned().await?,
+                Vc::cell(issue.title),
+                issue.message.cell(),
+                issue.code,
                 issue.issue_source,
-            )
+            )),
+            None => None,
         })
     }
 }
@@ -64,6 +69,8 @@ impl IssueCollector {
 struct IssueCollectorInner {
     emitted_issues: Vec<PlainAnalyzeIssue>,
 }
+
+#[derive(Clone)]
 struct PlainAnalyzeIssue {
     severity: IssueSeverity,
     source: ResolvedVc<Box<dyn Source>>,

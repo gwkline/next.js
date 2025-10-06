@@ -5,7 +5,7 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use turbo_rcstr::RcStr;
-use turbo_tasks::{NonLocalValue, ResolvedVc, TaskInput, ValueToString, Vc, trace::TraceRawVcs};
+use turbo_tasks::{NonLocalValue, ResolvedVc, TaskInput, Vc, trace::TraceRawVcs};
 use turbo_tasks_fs::FileSystemPath;
 use turbo_tasks_hash::{DeterministicHash, Xxh3Hash64Hasher, encode_hex, hash_xxh3_hash64};
 
@@ -56,6 +56,16 @@ impl Layer {
         &self.name
     }
 }
+
+// TODO: In a large build there are many 10s of thousands of AssetIdents and they get cloned a lot
+// on top of that. Most of the data is in RcStr instances which is cheap to clone but the raw struct
+// is large.  Consider ways to 'compress' the size of the struct.
+//
+// * Eagerly flatten things like 'assets', 'modifiers', query, fragment into a single string.  Many
+//   of these are 'write-only' so we can use that to our advantage.
+// * model it as an Arc<AssetIdent> to make it cheaper to clone.
+// * store the vecs as Option<ThinArc<T>> to make it smaller and cheaper to clone since they are
+//   usually empty or you are just modifying one of them.
 
 #[turbo_tasks::value(shared)]
 #[derive(Clone, Debug, Hash, TaskInput)]
@@ -114,19 +124,17 @@ impl AssetIdent {
     }
 }
 
-#[turbo_tasks::value_impl]
 impl AssetIdent {
     /// Computes a unique output asset name for the given asset identifier.
     /// TODO(alexkirsz) This is `turbopack-browser` specific, as
     /// `turbopack-nodejs` would use a content hash instead. But for now
     /// both are using the same name generation logic.
-    #[turbo_tasks::function]
     pub async fn output_name(
         &self,
         context_path: FileSystemPath,
         prefix: Option<RcStr>,
         expected_extension: RcStr,
-    ) -> Result<Vc<RcStr>> {
+    ) -> Result<String> {
         debug_assert!(
             expected_extension.starts_with("."),
             "the extension should include the leading '.', got '{expected_extension}'"
@@ -184,7 +192,11 @@ impl AssetIdent {
         for (key, ident) in assets.iter() {
             2_u8.deterministic_hash(&mut hasher);
             key.deterministic_hash(&mut hasher);
-            ident.to_string().await?.deterministic_hash(&mut hasher);
+            ident
+                .await?
+                .value_to_string()
+                .await?
+                .deterministic_hash(&mut hasher);
             has_hash = true;
         }
         for modifier in modifiers.iter() {
@@ -281,70 +293,73 @@ impl AssetIdent {
             name += "._";
         }
         name += &expected_extension;
-        Ok(Vc::cell(name.into()))
+        Ok(name)
+    }
+
+    /// Mimics `ValueToString::to_string`.
+    pub fn value_to_string(&self) -> Vc<RcStr> {
+        value_to_string(self.clone())
     }
 }
 
-#[turbo_tasks::value_impl]
-impl ValueToString for AssetIdent {
-    #[turbo_tasks::function]
-    async fn to_string(&self) -> Result<Vc<RcStr>> {
-        let mut s = self.path.value_to_string().owned().await?.into_owned();
+#[turbo_tasks::function]
 
-        // The query string is either empty or non-empty starting with `?` so we can just concat
-        s.push_str(&self.query);
-        // ditto for fragment
-        s.push_str(&self.fragment);
+async fn value_to_string(ident: AssetIdent) -> Result<Vc<RcStr>> {
+    let mut s = ident.path.value_to_string().owned().await?.into_owned();
 
-        if !self.assets.is_empty() {
-            s.push_str(" {");
+    // The query string is either empty or non-empty starting with `?` so we can just concat
+    s.push_str(&ident.query);
+    // ditto for fragment
+    s.push_str(&ident.fragment);
 
-            for (i, (key, asset)) in self.assets.iter().enumerate() {
-                if i > 0 {
-                    s.push(',');
-                }
+    if !ident.assets.is_empty() {
+        s.push_str(" {");
 
-                let asset_str = asset.to_string().await?;
-                write!(s, " {key} => {asset_str:?}")?;
+        for (i, (key, asset)) in ident.assets.iter().enumerate() {
+            if i > 0 {
+                s.push(',');
             }
 
-            s.push_str(" }");
+            let asset_str = asset.await?.value_to_string().await?;
+            write!(s, " {key} => {asset_str:?}")?;
         }
 
-        if let Some(layer) = &self.layer {
-            write!(s, " [{}]", layer.name)?;
-        }
-
-        if !self.modifiers.is_empty() {
-            s.push_str(" (");
-
-            for (i, modifier) in self.modifiers.iter().enumerate() {
-                if i > 0 {
-                    s.push_str(", ");
-                }
-
-                s.push_str(modifier);
-            }
-
-            s.push(')');
-        }
-
-        if let Some(content_type) = &self.content_type {
-            write!(s, " <{content_type}>")?;
-        }
-
-        if !self.parts.is_empty() {
-            for part in self.parts.iter() {
-                if !matches!(part, ModulePart::Facade) {
-                    // facade is not included in ident as switching between facade and non-facade
-                    // shouldn't change the ident
-                    write!(s, " <{part}>")?;
-                }
-            }
-        }
-
-        Ok(Vc::cell(s.into()))
+        s.push_str(" }");
     }
+
+    if let Some(layer) = &ident.layer {
+        write!(s, " [{}]", layer.name)?;
+    }
+
+    if !ident.modifiers.is_empty() {
+        s.push_str(" (");
+
+        for (i, modifier) in ident.modifiers.iter().enumerate() {
+            if i > 0 {
+                s.push_str(", ");
+            }
+
+            s.push_str(modifier);
+        }
+
+        s.push(')');
+    }
+
+    if let Some(content_type) = &ident.content_type {
+        write!(s, " <{content_type}>")?;
+    }
+
+    if !ident.parts.is_empty() {
+        for part in ident.parts.iter() {
+            if !matches!(part, ModulePart::Facade) {
+                // facade is not included in ident as switching between facade and non-facade
+                // shouldn't change the ident
+                write!(s, " <{part}>")?;
+            }
+        }
+    }
+
+    Ok(Vc::cell(s.into()))
 }
 
 fn clean_separators(s: &str) -> String {

@@ -256,7 +256,7 @@ impl ValueToString for TsExtendsReference {
         Ok(Vc::cell(
             format!(
                 "tsconfig extends {}",
-                self.config.ident().to_string().await?,
+                self.config.ident().await?.value_to_string().await?,
             )
             .into(),
         ))

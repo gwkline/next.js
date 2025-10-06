@@ -45,7 +45,7 @@ impl EcmascriptBuildNodeChunk {
             {
                 let mut ident = this.chunk.ident().owned().await?;
                 ident.add_modifier(modifier());
-                ident.cell()
+                ident
             },
             Vc::upcast(self),
         ))
@@ -85,12 +85,9 @@ impl OutputAsset for EcmascriptBuildNodeChunk {
         let this = self.await?;
         let mut ident = this.chunk.ident().owned().await?;
         ident.add_modifier(modifier());
-        Ok(this.chunking_context.chunk_path(
-            Some(Vc::upcast(self)),
-            ident.cell(),
-            None,
-            rcstr!(".js"),
-        ))
+        Ok(this
+            .chunking_context
+            .chunk_path(Some(Vc::upcast(self)), ident, None, rcstr!(".js")))
     }
 
     #[turbo_tasks::function]

@@ -112,7 +112,12 @@ async fn plain_chunk_items_with_info(
                 module: _,
             } = chunk_item_with_info;
 
-            let asset_ident = chunk_item.asset_ident().to_string();
+            let asset_ident = chunk_item
+                .asset_ident()
+                .await?
+                .value_to_string()
+                .owned()
+                .await?;
             let ty = chunk_item.ty();
             let chunk_item_size =
                 ty.chunk_item_size(chunking_context, *chunk_item, async_info.map(|info| *info));
@@ -123,7 +128,7 @@ async fn plain_chunk_items_with_info(
                     smallvec![ChunkItemOrBatchWithInfo::ChunkItem {
                         chunk_item: chunk_item_with_info,
                         size: *chunk_item_size.await?,
-                        asset_ident: asset_ident.owned().await?,
+                        asset_ident,
                     }],
                     SmallVec::new(),
                 )],
@@ -168,7 +173,12 @@ async fn plain_chunk_items_with_info_with_type(
                 module: _,
             } = chunk_item_with_info;
 
-            let asset_ident = chunk_item.asset_ident().to_string();
+            let asset_ident = chunk_item
+                .asset_ident()
+                .await?
+                .value_to_string()
+                .owned()
+                .await?;
             let chunk_item_size =
                 ty.chunk_item_size(chunking_context, *chunk_item, async_info.map(|info| *info));
             Ok((
@@ -176,7 +186,7 @@ async fn plain_chunk_items_with_info_with_type(
                 smallvec![ChunkItemOrBatchWithInfo::ChunkItem {
                     chunk_item: chunk_item_with_info.clone(),
                     size: *chunk_item_size.await?,
-                    asset_ident: asset_ident.owned().await?,
+                    asset_ident,
                 }],
                 batch_group.into_iter().collect(),
             ))

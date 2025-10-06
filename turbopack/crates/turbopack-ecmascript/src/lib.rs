@@ -85,7 +85,7 @@ pub use transform::{
 use turbo_rcstr::{RcStr, rcstr};
 use turbo_tasks::{
     FxDashMap, FxIndexMap, IntoTraitRef, NonLocalValue, ReadRef, ResolvedVc, TaskInput,
-    TryFlatJoinIterExt, TryJoinIterExt, Upcast, ValueToString, Vc, trace::TraceRawVcs,
+    TryFlatJoinIterExt, TryJoinIterExt, Upcast, Vc, trace::TraceRawVcs,
 };
 use turbo_tasks_fs::{FileJsonContent, FileSystemPath, glob::Glob, rope::Rope};
 use turbopack_core::{
@@ -541,7 +541,7 @@ impl EcmascriptAnalyzable for EcmascriptModuleAsset {
 
         Ok(EcmascriptModuleContent::new_without_analysis(
             parsed,
-            self.ident(),
+            self.ident().owned().await?,
             this.options.await?.specified_module_type,
             generate_source_map,
         ))
@@ -899,7 +899,7 @@ impl EcmascriptChunkItem for ModuleChunkItem {
     ) -> Result<Vc<EcmascriptChunkItemContent>> {
         let span = tracing::info_span!(
             "code generation",
-            name = display(self.asset_ident().to_string().await?)
+            name = display(self.asset_ident().await?.value_to_string().await?)
         );
         async {
             let this = self.await?;
@@ -1056,7 +1056,7 @@ impl EcmascriptModuleContent {
 
         let content = process_parse_result(
             *parsed,
-            module.ident(),
+            module.ident().owned().await?,
             *specified_module_type,
             *generate_source_map,
             *original_source_map,
@@ -1072,7 +1072,7 @@ impl EcmascriptModuleContent {
     #[turbo_tasks::function]
     pub async fn new_without_analysis(
         parsed: Vc<ParseResult>,
-        ident: Vc<AssetIdent>,
+        ident: AssetIdent,
         specified_module_type: SpecifiedModuleType,
         generate_source_map: bool,
     ) -> Result<Vc<Self>> {
@@ -1142,7 +1142,7 @@ impl EcmascriptModuleContent {
 
                     let result = process_parse_result(
                         *parsed,
-                        module.ident(),
+                        module.ident().owned().await?,
                         *specified_module_type,
                         *generate_source_map,
                         *original_source_map,
@@ -1544,7 +1544,12 @@ async fn merge_modules(
         Err((content_idx, err)) => {
             return Err(err.context(format!(
                 "Processing {}",
-                contents[content_idx].0.ident().to_string().await?
+                contents[content_idx]
+                    .0
+                    .ident()
+                    .await?
+                    .value_to_string()
+                    .await?
             )));
         }
     };
@@ -1555,7 +1560,10 @@ async fn merge_modules(
         contents
             .iter()
             .enumerate()
-            .map(async |(i, m)| Ok((inserted.contains(&i), m.0.ident().to_string().await?)))
+            .map(async |(i, m)| Ok((
+                inserted.contains(&i),
+                m.0.ident().await?.value_to_string().await?
+            )))
             .try_join()
             .await?,
     );
@@ -1704,7 +1712,7 @@ struct ScopeHoistingOptions<'a> {
 
 async fn process_parse_result(
     parsed: Option<ResolvedVc<ParseResult>>,
-    ident: Vc<AssetIdent>,
+    ident: AssetIdent,
     specified_module_type: SpecifiedModuleType,
     generate_source_map: bool,
     original_source_map: Option<ResolvedVc<Box<dyn GenerateSourceMap>>>,
@@ -1786,7 +1794,8 @@ async fn process_parse_result(
                         Some(Comment {
                             kind: CommentKind::Line,
                             span: DUMMY_SP,
-                            text: format!(" MERGED MODULE: {}", ident.to_string().await?).into(),
+                            text: format!(" MERGED MODULE: {}", ident.value_to_string().await?)
+                                .into(),
                         })
                     } else {
                         None
@@ -1901,7 +1910,7 @@ async fn process_parse_result(
             Ok(match parse_result {
                 ParseResult::Ok { .. } => unreachable!(),
                 ParseResult::Unparsable { messages } => {
-                    let path = ident.path().await?.value_to_string().await?;
+                    let path = ident.path.value_to_string().await?;
                     let error_messages = messages
                         .as_ref()
                         .and_then(|m| m.first().map(|f| format!("\n{f}")))
@@ -1932,7 +1941,7 @@ async fn process_parse_result(
                     }
                 }
                 ParseResult::NotFound => {
-                    let path = ident.path().await?.to_string();
+                    let path = ident.path.value_to_string().await?;
                     let msg = format!("Could not parse module '{path}', file not found");
                     let body = vec![
                         quote!(
@@ -1962,7 +1971,7 @@ async fn process_parse_result(
     )
     .instrument(tracing::trace_span!(
         "process parse result",
-        ident = display(ident.to_string().await?),
+        ident = display(ident.value_to_string().await?),
     ))
     .await
 }

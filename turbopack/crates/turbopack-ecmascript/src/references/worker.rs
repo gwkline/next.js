@@ -141,7 +141,7 @@ impl WorkerAssetReferenceCodeGen {
         };
 
         let item_id = chunking_context
-            .chunk_item_id_from_ident(loader.ident())
+            .chunk_item_id_from_ident(loader.ident().owned().await?)
             .await?;
 
         let visitor = create_visitor!(self.path, visit_mut_expr, |expr: &mut Expr| {
