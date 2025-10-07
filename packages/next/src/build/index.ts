@@ -2721,6 +2721,10 @@ export default async function build(
           invocationCount: config.experimental.ppr ? 1 : 0,
         },
         {
+          featureName: 'isolatedDevBuild',
+          invocationCount: config.isolatedDevBuild ? 1 : 0,
+        },
+        {
           featureName: 'turbopackPersistentCaching',
           invocationCount: isPersistentCachingEnabledForBuild(config) ? 1 : 0,
         },

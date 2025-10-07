@@ -175,6 +175,7 @@ export type EventBuildFeatureUsage = {
     | 'experimental/cacheComponents'
     | 'experimental/optimizeCss'
     | 'experimental/ppr'
+    | 'isolatedDevBuild'
     | 'swcLoader'
     | 'swcRelay'
     | 'swcStyledComponents'
