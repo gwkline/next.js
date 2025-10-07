@@ -1196,10 +1196,7 @@ function assignDefaultsAndValidate(
     )
   }
 
-  if (
-    phase === PHASE_DEVELOPMENT_SERVER &&
-    result.experimental?.isolatedDevBuild
-  ) {
+  if (phase === PHASE_DEVELOPMENT_SERVER && result.isolatedDevBuild) {
     result.distDir = join(result.distDir, 'dev')
   }
 

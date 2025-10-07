@@ -784,13 +784,6 @@ export interface ExperimentalConfig {
   rootParams?: boolean
 
   /**
-   * Use an isolated directory for development builds to prevent conflicts
-   * with production builds. Development builds will use `{distDir}/dev`
-   * instead of `{distDir}`.
-   */
-  isolatedDevBuild?: boolean
-
-  /**
    * Enable the Model Context Protocol (MCP) server for AI-assisted development.
    * When enabled, Next.js will expose an MCP server at `/_next/mcp` that provides
    * code intelligence and project context to AI assistants.
@@ -1238,6 +1231,14 @@ export interface NextConfig {
 
   skipTrailingSlashRedirect?: boolean
 
+  /**
+   * Use an isolated directory for development builds to prevent conflicts
+   * with production builds. Development builds will use `{distDir}/dev`
+   * instead of `{distDir}`.
+   * @default true
+   */
+  isolatedDevBuild?: boolean
+
   modularizeImports?: Record<
     string,
     {
@@ -1510,10 +1511,10 @@ export const defaultConfig = Object.freeze({
     slowModuleDetection: undefined,
     globalNotFound: false,
     browserDebugInfoInTerminal: false,
-    isolatedDevBuild: true,
   },
   htmlLimitedBots: undefined,
   bundlePagesRouterDependencies: false,
+  isolatedDevBuild: true,
 } satisfies NextConfig)
 
 export async function normalizeConfig(phase: string, config: any) {
