@@ -6,7 +6,7 @@ use turbo_rcstr::RcStr;
 use turbo_tasks::{ReadRef, ResolvedVc, TryJoinIterExt, Vc};
 use turbo_tasks_hash::hash_xxh3_hash64;
 use turbopack_core::{
-    chunk::{ChunkableModule, ChunkingType, module_id_strategies::GlobalModuleIdStrategy},
+    chunk::{ChunkableModule, ChunkingType, module_id_strategies::ModuleIdStrategy},
     ident::AssetIdent,
     module::Module,
     module_graph::{ModuleGraph, RefData},
@@ -16,7 +16,7 @@ use turbopack_ecmascript::async_chunk::module::AsyncLoaderModule;
 #[turbo_tasks::function]
 pub async fn get_global_module_id_strategy(
     module_graph: ResolvedVc<ModuleGraph>,
-) -> Result<Vc<GlobalModuleIdStrategy>> {
+) -> Result<Vc<ModuleIdStrategy>> {
     let span = tracing::info_span!("compute module id map");
     async move {
         let module_graph = module_graph.read_graphs().await?;
@@ -61,12 +61,12 @@ pub async fn get_global_module_id_strategy(
 
         finalize_module_ids(&mut module_id_map);
 
-        Ok(GlobalModuleIdStrategy {
-            module_id_map: module_id_map
+        Ok(ModuleIdStrategy::Global(
+            module_id_map
                 .into_iter()
                 .map(|(ident, (_, hash))| ((*ident).clone(), hash))
                 .collect(),
-        }
+        )
         .cell())
     }
     .instrument(span)

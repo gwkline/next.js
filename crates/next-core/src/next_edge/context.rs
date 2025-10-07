@@ -198,7 +198,7 @@ pub struct EdgeChunkingContextOptions {
     pub node_root: FileSystemPath,
     pub output_root_to_root_path: Vc<RcStr>,
     pub environment: Vc<Environment>,
-    pub module_id_strategy: Vc<Box<dyn ModuleIdStrategy>>,
+    pub module_id_strategy: Vc<ModuleIdStrategy>,
     pub export_usage: Vc<OptionExportUsageInfo>,
     pub turbo_minify: Vc<bool>,
     pub turbo_source_maps: Vc<bool>,

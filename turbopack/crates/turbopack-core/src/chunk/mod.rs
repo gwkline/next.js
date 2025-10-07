@@ -540,7 +540,7 @@ where
     /// Returns the module id of this chunk item.
     fn id(self: Vc<Self>) -> Vc<ModuleId> {
         let chunk_item = Vc::upcast_non_strict(self);
-        chunk_item.chunking_context().chunk_item_id(chunk_item)
+        chunk_item_id(chunk_item.chunking_context(), chunk_item)
     }
 }
 
@@ -559,8 +559,31 @@ where
         self: Vc<Self>,
         chunking_context: Vc<Box<dyn ChunkingContext>>,
     ) -> Vc<ModuleId> {
-        chunking_context.chunk_item_id_from_module(Vc::upcast_non_strict(self))
+        chunk_item_id_from_module(chunking_context, Vc::upcast_non_strict(self))
     }
+}
+
+// TODO: these two methods shouldn't really be turbo tasks, but instead be part of the Extension
+// trait.
+
+#[turbo_tasks::function]
+async fn chunk_item_id(
+    chunking_context: Vc<Box<dyn ChunkingContext>>,
+    module: Vc<Box<dyn ChunkItem>>,
+) -> Result<Vc<ModuleId>> {
+    Ok(chunking_context
+        .module_id_strategy()
+        .get_module_id(module.asset_ident().await?))
+}
+
+#[turbo_tasks::function]
+async fn chunk_item_id_from_module(
+    chunking_context: Vc<Box<dyn ChunkingContext>>,
+    module: Vc<Box<dyn Module>>,
+) -> Result<Vc<ModuleId>> {
+    Ok(chunking_context
+        .module_id_strategy()
+        .get_module_id(module.ident().await?))
 }
 
 #[cfg(test)]

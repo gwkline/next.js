@@ -415,7 +415,7 @@ pub struct ClientChunkingContextOptions {
     pub asset_prefix: Vc<Option<RcStr>>,
     pub chunk_suffix_path: Vc<Option<RcStr>>,
     pub environment: Vc<Environment>,
-    pub module_id_strategy: Vc<Box<dyn ModuleIdStrategy>>,
+    pub module_id_strategy: Vc<ModuleIdStrategy>,
     pub export_usage: Vc<OptionExportUsageInfo>,
     pub minify: Vc<bool>,
     pub source_maps: Vc<bool>,

@@ -281,22 +281,9 @@ pub trait ChunkingContext {
     ) -> Result<Vc<EntryChunkGroupResult>>;
 
     #[turbo_tasks::function]
-    async fn chunk_item_id_from_ident(self: Vc<Self>, ident: AssetIdent) -> Result<Vc<ModuleId>>;
-
-    // TODO: these two methods shouldn't really be turbo tasks, but instead be part of the Extension
-    // trait.
-
-    #[turbo_tasks::function]
-    async fn chunk_item_id(self: Vc<Self>, module: Vc<Box<dyn ChunkItem>>) -> Result<Vc<ModuleId>> {
-        Ok(self.chunk_item_id_from_ident(module.asset_ident().owned().await?))
-    }
-    #[turbo_tasks::function]
-    async fn chunk_item_id_from_module(
+    fn module_id_strategy(
         self: Vc<Self>,
-        module: Vc<Box<dyn Module>>,
-    ) -> Result<Vc<ModuleId>> {
-        Ok(self.chunk_item_id_from_ident(module.ident().owned().await?))
-    }
+    ) -> Vc<crate::chunk::module_id_strategies::ModuleIdStrategy>;
 
     #[turbo_tasks::function]
     async fn module_export_usage(

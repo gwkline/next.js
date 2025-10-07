@@ -15,7 +15,7 @@ use turbopack_core::{
         EvaluatableAssets, MinifyType, ModuleId, SourceMapsType,
         availability_info::AvailabilityInfo,
         chunk_group::{MakeChunkGroupResult, make_chunk_group},
-        module_id_strategies::{DevModuleIdStrategy, ModuleIdStrategy},
+        module_id_strategies::ModuleIdStrategy,
     },
     environment::Environment,
     ident::AssetIdent,
@@ -154,10 +154,7 @@ impl BrowserChunkingContextBuilder {
         self
     }
 
-    pub fn module_id_strategy(
-        mut self,
-        module_id_strategy: ResolvedVc<Box<dyn ModuleIdStrategy>>,
-    ) -> Self {
+    pub fn module_id_strategy(mut self, module_id_strategy: ResolvedVc<ModuleIdStrategy>) -> Self {
         self.chunking_context.module_id_strategy = module_id_strategy;
         self
     }
@@ -250,7 +247,7 @@ pub struct BrowserChunkingContext {
     /// Whether to use manifest chunks for lazy compilation
     manifest_chunks: bool,
     /// The module id strategy to use
-    module_id_strategy: ResolvedVc<Box<dyn ModuleIdStrategy>>,
+    module_id_strategy: ResolvedVc<ModuleIdStrategy>,
     /// The module export usage info, if available.
     export_usage: Option<ResolvedVc<ExportUsageInfo>>,
     /// The chunking configs
@@ -293,7 +290,7 @@ impl BrowserChunkingContext {
                 source_maps_type: SourceMapsType::Full,
                 current_chunk_method: CurrentChunkMethod::StringLiteral,
                 manifest_chunks: false,
-                module_id_strategy: ResolvedVc::upcast(DevModuleIdStrategy::new_resolved()),
+                module_id_strategy: ModuleIdStrategy::Named.resolved_cell(),
                 export_usage: None,
                 chunking_configs: Default::default(),
             },
@@ -749,8 +746,8 @@ impl ChunkingContext for BrowserChunkingContext {
     }
 
     #[turbo_tasks::function]
-    fn chunk_item_id_from_ident(&self, ident: AssetIdent) -> Vc<ModuleId> {
-        self.module_id_strategy.get_module_id(ident)
+    fn module_id_strategy(&self) -> Vc<ModuleIdStrategy> {
+        *self.module_id_strategy
     }
 
     #[turbo_tasks::function]
@@ -784,7 +781,7 @@ impl ChunkingContext for BrowserChunkingContext {
         } else {
             AsyncLoaderModule::asset_ident_for(module)
         };
-        Ok(self.module_id_strategy.get_module_id(ident.owned().await?))
+        Ok(self.module_id_strategy.get_module_id(ident.await?))
     }
 
     #[turbo_tasks::function]

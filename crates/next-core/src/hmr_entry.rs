@@ -7,8 +7,8 @@ use turbo_tasks_fs::{FileSystem, VirtualFileSystem, glob::Glob, rope::RopeBuilde
 use turbopack_core::{
     asset::{Asset, AssetContent},
     chunk::{
-        ChunkItem, ChunkType, ChunkableModule, ChunkableModuleReference, ChunkingContext,
-        EvaluatableAsset,
+        ChunkItem, ChunkItemExt, ChunkType, ChunkableModule, ChunkableModuleReference,
+        ChunkingContext, EvaluatableAsset,
     },
     ident::AssetIdent,
     module::Module,
@@ -184,7 +184,7 @@ impl EcmascriptChunkItem for HmrEntryChunkItem {
         let this = self.module.await?;
         let module = this.module;
         let chunk_item = module.as_chunk_item(*self.module_graph, *self.chunking_context);
-        let id = self.chunking_context.chunk_item_id(chunk_item).await?;
+        let id = chunk_item.id().await?;
 
         let mut code = RopeBuilder::default();
         writeln!(code, "{TURBOPACK_REQUIRE}({});", StringifyJs(&id))?;

@@ -1250,7 +1250,7 @@ impl PageEndpoint {
         &self,
         client_chunks: ResolvedVc<OutputAssets>,
     ) -> Result<Vc<Box<dyn OutputAsset>>> {
-        let node_root = self.pages_project.project().node_root().owned().await?;
+        let node_root = self.pages_project.project().node_root().await?;
         let client_relative_path = self
             .pages_project
             .project()

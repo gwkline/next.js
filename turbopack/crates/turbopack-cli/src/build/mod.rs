@@ -302,11 +302,9 @@ async fn build_internal(
         Vc::cell(vec![ChunkGroupEntry::Entry(entries.clone())]),
         false,
     );
-    let module_id_strategy = ResolvedVc::upcast(
-        get_global_module_id_strategy(module_graph)
-            .to_resolved()
-            .await?,
-    );
+    let module_id_strategy = get_global_module_id_strategy(module_graph)
+        .to_resolved()
+        .await?;
     let export_usage = compute_export_usage_info(module_graph.to_resolved().await?)
         .resolve_strongly_consistent()
         .await?;
