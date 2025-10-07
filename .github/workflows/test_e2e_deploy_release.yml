@@ -75,10 +75,9 @@ jobs:
     secrets: inherit
     strategy:
       fail-fast: false
-      # Limit the number of parallel tests to 4 to avoid rate limits
-      max-parallel: 4
+      # Limit to 4 groups to avoid rate limits since turbopack also does 4
       matrix:
-        group: [1/8, 2/8, 3/8, 4/8, 5/8, 6/8, 7/8, 8/8]
+        group: [1/4, 2/4, 3/4, 4/4]
     with:
       afterBuild: |
         npm i -g vercel@latest && \
@@ -103,10 +102,9 @@ jobs:
     secrets: inherit
     strategy:
       fail-fast: false
-      # Limit the number of parallel tests to 4 to avoid rate limits
-      max-parallel: 4
+      # Limit to 4 groups to avoid rate limits since webpack also does 4
       matrix:
-        group: [1/8, 2/8, 3/8, 4/8, 5/8, 6/8, 7/8, 8/8]
+        group: [1/4, 2/4, 3/4, 4/4]
     with:
       afterBuild: |
         npm i -g vercel@latest && \
