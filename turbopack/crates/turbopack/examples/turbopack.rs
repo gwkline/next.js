@@ -19,10 +19,12 @@ use turbopack_core::{
     context::AssetContext,
     environment::{Environment, ExecutionEnvironment, NodeJsEnvironment},
     file_source::FileSource,
-    ident::Layer,
+    new_layer,
     rebase::RebasedAsset,
 };
 use turbopack_resolve::resolve_options_context::ResolveOptionsContext;
+
+new_layer!(DEFAULT_LAYER, "default");
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -59,7 +61,7 @@ async fn main() -> Result<()> {
                     ..Default::default()
                 }
                 .cell(),
-                Layer::new(rcstr!("default")),
+                *DEFAULT_LAYER,
             );
             let module = module_asset_context
                 .process(

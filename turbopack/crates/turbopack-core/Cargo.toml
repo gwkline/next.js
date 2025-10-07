@@ -22,6 +22,7 @@ const_format = { workspace = true }
 data-encoding = { workspace = true }
 either = { workspace = true }
 indexmap = { workspace = true }
+inventory = { workspace = true }
 once_cell = { workspace = true }
 patricia_tree = "0.5.5"
 petgraph = { workspace = true, features = ["serde-1"] }

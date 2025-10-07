@@ -510,7 +510,7 @@ pub struct PlainTraceItem {
     // The path of the file, relative to the filesystem root
     pub path: RcStr,
     // An optional label attached to the module that clarifies where in the module graph it is.
-    pub layer: Option<RcStr>,
+    pub layer: Option<&'static str>,
 }
 
 impl PlainTraceItem {
@@ -521,7 +521,7 @@ impl PlainTraceItem {
         let fs_name = fs_path.fs.to_string().owned().await?;
         let root_path = fs_path.fs.root().await?.path.clone();
         let path = fs_path.path.clone();
-        let layer = asset.layer.as_ref().map(Layer::user_friendly_name).cloned();
+        let layer = asset.layer.as_ref().map(Layer::user_friendly_name);
         Ok(Self {
             fs_name,
             root_path,

@@ -25,7 +25,7 @@ impl AssetContext for NoopAssetContext {
     }
 
     fn layer(&self) -> Layer {
-        self.layer.clone()
+        self.layer
     }
 
     #[turbo_tasks::function]

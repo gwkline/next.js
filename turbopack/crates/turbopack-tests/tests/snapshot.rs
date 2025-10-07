@@ -42,7 +42,6 @@ use turbopack_core::{
     environment::{BrowserEnvironment, Environment, ExecutionEnvironment, NodeJsEnvironment},
     file_source::FileSource,
     free_var_references,
-    ident::Layer,
     issue::CollectibleIssuesExt,
     module::Module,
     module_graph::{
@@ -50,6 +49,7 @@ use turbopack_core::{
         chunk_group_info::{ChunkGroup, ChunkGroupEntry},
         export_usage::compute_export_usage_info,
     },
+    new_layer,
     output::{OutputAsset, OutputAssets, OutputAssetsWithReferenced},
     reference_type::{EntryReferenceSubType, ReferenceType},
     source::Source,
@@ -217,6 +217,8 @@ async fn run(resource: PathBuf) -> Result<()> {
 
     Ok(())
 }
+
+new_layer!(TEST_LAYER, "test");
 
 #[turbo_tasks::function(operation)]
 async fn run_inner_operation(resource: RcStr) -> Result<()> {
@@ -388,7 +390,7 @@ async fn run_test_operation(resource: RcStr) -> Result<Vc<FileSystemPath>> {
             ..Default::default()
         }
         .cell(),
-        Layer::new(rcstr!("test")),
+        *TEST_LAYER,
     ));
 
     let runtime_entries = maybe_load_env(asset_context, project_path.clone())

@@ -18,8 +18,8 @@ use turbopack_core::{
     context::AssetContext,
     environment::{Environment, ExecutionEnvironment, NodeJsEnvironment},
     file_source::FileSource,
-    ident::Layer,
     issue::{IssueReporter, IssueSeverity, handle_issues},
+    new_layer,
     output::OutputAsset,
     reference::all_assets_from_entries,
     reference_type::ReferenceType,
@@ -57,6 +57,8 @@ pub async fn node_file_trace(
 
     Ok(())
 }
+
+new_layer!(EXTERNALS_TRACING_LAYER, "externals-tracing");
 
 #[turbo_tasks::function(operation)]
 async fn node_file_trace_operation(
@@ -109,7 +111,7 @@ async fn node_file_trace_operation(
             ..Default::default()
         }
         .cell(),
-        Layer::new(rcstr!("externals-tracing")),
+        *EXTERNALS_TRACING_LAYER,
     );
     let module = module_asset_context
         .process(Vc::upcast(source), ReferenceType::Undefined)

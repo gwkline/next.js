@@ -10,7 +10,7 @@ use turbopack_core::{
     compile_time_info::CompileTimeInfo,
     environment::{Environment, ExecutionEnvironment, NodeJsEnvironment},
     file_source::FileSource,
-    ident::Layer,
+    new_layer,
 };
 use turbopack_ecmascript::{
     AnalyzeMode, EcmascriptInputTransforms, EcmascriptModuleAsset, EcmascriptOptions,
@@ -60,6 +60,8 @@ pub fn benchmark(c: &mut Criterion) {
     }
 }
 
+new_layer!(TEST_LAYER, "test");
+
 async fn setup(
     root_dir: &str,
     file: &str,
@@ -71,7 +73,7 @@ async fn setup(
         NodeJsEnvironment::default().resolved_cell(),
     ));
     let compile_time_info = CompileTimeInfo::new(environment).to_resolved().await?;
-    let layer = Layer::new(rcstr!("test"));
+    let layer = *TEST_LAYER;
     let module_asset_context = NoopAssetContext {
         compile_time_info,
         layer,

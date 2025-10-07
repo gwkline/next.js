@@ -374,7 +374,7 @@ mod tests {
     }
 
     #[test]
-    fn test_errors_on_unvavailable_weights() -> Result<()> {
+    fn test_errors_on_unavailable_weights() -> Result<()> {
         let data: FxIndexMap<RcStr, FontDataEntry> = parse_json_with_source_context(
             r#"
             {

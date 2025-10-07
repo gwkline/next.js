@@ -46,7 +46,7 @@ use turbopack_core::{
     context::AssetContext,
     environment::{Environment, ExecutionEnvironment, NodeJsEnvironment},
     file_source::FileSource,
-    ident::Layer,
+    new_layer,
     output::OutputAsset,
     rebase::RebasedAsset,
     reference_type::ReferenceType,
@@ -333,6 +333,8 @@ fn bench_against_node_nft_inner(input: CaseInput) {
     });
 }
 
+new_layer!(TEST_LAYER, "test");
+
 #[turbo_tasks::function(operation)]
 async fn node_file_trace_operation(
     package_root: RcStr,
@@ -391,7 +393,7 @@ async fn node_file_trace_operation(
             ..Default::default()
         }
         .cell(),
-        Layer::new(rcstr!("test")),
+        *TEST_LAYER,
     );
     let module = module_asset_context
         .process(Vc::upcast(source), ReferenceType::Undefined)

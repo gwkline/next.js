@@ -20,8 +20,7 @@ use turbopack_core::{
     condition::ContextCondition,
     context::AssetContext,
     environment::{BrowserEnvironment, Environment, ExecutionEnvironment},
-    free_var_references,
-    ident::Layer,
+    free_var_references, new_layer,
     resolve::options::{ImportMap, ImportMapping},
 };
 use turbopack_node::{
@@ -156,6 +155,8 @@ async fn get_client_module_options_context(
     Ok(module_options_context)
 }
 
+new_layer!(CLIENT_LAYER, "client", "Pages Router Client");
+
 #[turbo_tasks::function]
 pub fn get_client_asset_context(
     project_path: FileSystemPath,
@@ -179,7 +180,7 @@ pub fn get_client_asset_context(
         compile_time_info,
         module_options_context,
         resolve_options_context,
-        Layer::new_with_user_friendly_name(rcstr!("client"), rcstr!("Pages Router Client")),
+        *CLIENT_LAYER,
     ));
 
     asset_context

@@ -12,7 +12,10 @@ use turbo_tasks_hash::{DeterministicHash, Xxh3Hash64Hasher, encode_hex, hash_xxh
 use crate::resolve::ModulePart;
 
 /// A layer identifies a distinct part of the module graph.
+///
+/// Construct a layer with `new_layer!` macro
 #[derive(
+    Copy,
     Clone,
     TaskInput,
     Hash,
@@ -26,35 +29,80 @@ use crate::resolve::ModulePart;
     NonLocalValue,
 )]
 pub struct Layer {
-    name: RcStr,
-    user_friendly_name: Option<RcStr>,
+    id: u8,
 }
 
-impl Layer {
-    pub fn new(name: RcStr) -> Self {
-        debug_assert!(!name.is_empty());
-        Self {
-            name,
-            user_friendly_name: None,
+/// A list of all layers sorted by name
+static LAYERS: Lazy<Vec<LayerRegistration>> = Lazy::new(|| {
+    let mut all_layers: Vec<_> = inventory::iter::<LayerRegistration>().copied().collect();
+    all_layers.sort_by_key(|registration| registration.name);
+    let mut prev: Option<&LayerRegistration> = None;
+    for registration in all_layers.iter() {
+        if let Some(prev) = prev
+            && prev.name == registration.name
+        {
+            panic!(
+                "duplicate layer definition, names should be unique: {prev:?}, {registration:?}"
+            );
         }
+        prev = Some(registration);
     }
-    pub fn new_with_user_friendly_name(name: RcStr, user_friendly_name: RcStr) -> Self {
+    assert!(all_layers.len() <= u8::MAX as usize);
+    all_layers
+});
+
+impl Layer {
+    #[doc(hidden)]
+    pub fn new(name: &'static str) -> Self {
         debug_assert!(!name.is_empty());
-        debug_assert!(!user_friendly_name.is_empty());
-        Self {
-            name,
-            user_friendly_name: Some(user_friendly_name),
-        }
+        let id = match LAYERS.binary_search_by_key(&name, |registration| registration.name) {
+            // Safety: we know that the length of the layers is less than u8::MAX due to the assert
+            // in LAYERS above
+            Ok(id) => id as u8,
+            Err(_) => panic!("layer not found: {name}, did you forget to call `new_layer!`?"),
+        };
+
+        Self { id }
     }
 
     /// Returns a user friendly name for this layer
-    pub fn user_friendly_name(&self) -> &RcStr {
-        self.user_friendly_name.as_ref().unwrap_or(&self.name)
+    pub fn user_friendly_name(&self) -> &'static str {
+        let r = &LAYERS[self.id as usize];
+        r.user_friendly_name.unwrap_or(r.name)
     }
 
-    pub fn name(&self) -> &RcStr {
-        &self.name
+    pub fn name(&self) -> &'static str {
+        LAYERS[self.id as usize].name
     }
+}
+
+#[doc(hidden)]
+#[derive(Clone, Copy, Debug)]
+pub struct LayerRegistration {
+    pub name: &'static str,
+    pub user_friendly_name: Option<&'static str>,
+}
+
+inventory::collect!(LayerRegistration);
+
+#[macro_export]
+macro_rules! new_layer {
+    ($var:ident, $name:expr, $user_friendly_name:expr) => {
+        turbo_tasks::macro_helpers::inventory_submit!($crate::ident::LayerRegistration {
+            name: $name,
+            user_friendly_name: Some($user_friendly_name)
+        });
+        static $var: ::turbo_tasks::macro_helpers::Lazy<$crate::ident::Layer> =
+            ::turbo_tasks::macro_helpers::Lazy::new(|| $crate::ident::Layer::new($name));
+    };
+    ($var:ident, $name:expr) => {
+        turbo_tasks::macro_helpers::inventory_submit!($crate::ident::LayerRegistration {
+            name: $name,
+            user_friendly_name: None
+        });
+        static $var: ::turbo_tasks::macro_helpers::Lazy<$crate::ident::Layer> =
+            ::turbo_tasks::macro_helpers::Lazy::new(|| $crate::ident::Layer::new($name));
+    };
 }
 
 // TODO: In a large build there are many 10s of thousands of AssetIdents and they get cloned a lot
@@ -93,10 +141,13 @@ pub struct AssetIdent {
 }
 
 impl AssetIdent {
+    fn check_non_empty_and_no_commas(modifier: &RcStr) {
+        debug_assert!(!modifier.is_empty(), "modifiers cannot be empty.");
+        debug_assert!(!modifier.contains(","), "modifiers cannot contain commas.");
+    }
     pub fn add_modifier(&mut self, modifier: RcStr) {
         if self.modifiers.is_empty() {
-            debug_assert!(!modifier.is_empty(), "modifiers cannot be empty.");
-            debug_assert!(!modifier.contains(","), "modifiers cannot contain commas.");
+            Self::check_non_empty_and_no_commas(&modifier);
             self.modifiers = modifier;
             return;
         }
@@ -106,8 +157,7 @@ impl AssetIdent {
     pub fn add_modifiers(&mut self, new_modifiers: impl IntoIterator<Item = RcStr>) {
         let mut modifiers = take(&mut self.modifiers).into_owned();
         for modifier in new_modifiers {
-            debug_assert!(!modifier.is_empty(), "modifiers cannot be empty.");
-            debug_assert!(!modifier.contains(","), "modifiers cannot contain commas.");
+            Self::check_non_empty_and_no_commas(&modifier);
             if !modifiers.is_empty() {
                 modifiers.push_str(", ");
             }
@@ -362,7 +412,7 @@ async fn value_to_string(ident: AssetIdent) -> Result<Vc<RcStr>> {
 
     if let Some(layer) = &ident.layer {
         s.push_str(" [");
-        s.push_str(&layer.name);
+        s.push_str(layer.name());
         s.push(']');
     }
 
@@ -391,3 +441,6 @@ fn clean_separators(s: &str) -> String {
 fn clean_additional_extensions(s: &str) -> String {
     s.replace('.', "_")
 }
+
+// Re-export the macro in this module's namespace
+pub use crate::new_layer;

@@ -50,12 +50,13 @@ use turbopack_core::{
     },
     context::AssetContext,
     file_source::FileSource,
-    ident::{AssetIdent, Layer},
+    ident::AssetIdent,
     module::Module,
     module_graph::{
         GraphEntries, ModuleGraph, SingleModuleGraph, VisitedModules,
         chunk_group_info::{ChunkGroup, ChunkGroupEntry},
     },
+    new_layer,
     output::{OptionOutputAsset, OutputAsset, OutputAssets, OutputAssetsWithReferenced},
     reference_type::{EcmaScriptModulesReferenceSubType, EntryReferenceSubType, ReferenceType},
     resolve::{origin::PlainResolveOrigin, parse::Request, pattern::Pattern},
@@ -81,6 +82,12 @@ use crate::{
     route::{Endpoint, EndpointOutput, EndpointOutputPaths, Route, Routes},
     webpack_stats::generate_webpack_stats,
 };
+
+new_layer!(CLIENT_LAYER, "client", "Browser");
+new_layer!(SSR_LAYER, "ssr", "SSR");
+new_layer!(API_LAYER, "api", "Route");
+new_layer!(EDGE_SSR_LAYER, "edge-ssr", "Edge SSR");
+new_layer!(EDGE_API_LAYER, "edge-api", "Edge Route");
 
 #[turbo_tasks::value]
 pub struct PagesProject {
@@ -379,7 +386,7 @@ impl PagesProject {
             self.project().client_compile_time_info(),
             self.client_module_options_context(),
             self.client_resolve_options_context(),
-            Layer::new_with_user_friendly_name(rcstr!("client"), rcstr!("Browser")),
+            *CLIENT_LAYER,
         )
     }
 
@@ -390,7 +397,7 @@ impl PagesProject {
             self.project().server_compile_time_info(),
             self.ssr_module_options_context(),
             self.ssr_resolve_options_context(),
-            Layer::new_with_user_friendly_name(rcstr!("ssr"), rcstr!("SSR")),
+            *SSR_LAYER,
         )
     }
 
@@ -403,7 +410,7 @@ impl PagesProject {
             self.project().server_compile_time_info(),
             self.api_module_options_context(),
             self.ssr_resolve_options_context(),
-            Layer::new_with_user_friendly_name(rcstr!("api"), rcstr!("Route")),
+            *API_LAYER,
         )
     }
 
@@ -414,7 +421,7 @@ impl PagesProject {
             self.project().edge_compile_time_info(),
             self.edge_ssr_module_options_context(),
             self.edge_ssr_resolve_options_context(),
-            Layer::new_with_user_friendly_name(rcstr!("edge-ssr"), rcstr!("Edge SSR")),
+            *EDGE_SSR_LAYER,
         )
     }
 
@@ -425,7 +432,7 @@ impl PagesProject {
             self.project().edge_compile_time_info(),
             self.edge_api_module_options_context(),
             self.edge_ssr_resolve_options_context(),
-            Layer::new_with_user_friendly_name(rcstr!("edge-api"), rcstr!("Edge Route")),
+            *EDGE_API_LAYER,
         )
     }
 

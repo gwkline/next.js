@@ -86,7 +86,7 @@ pub trait Transition {
             self.process_module_options_context(*module_asset_context.module_options_context);
         let resolve_options_context =
             self.process_resolve_options_context(*module_asset_context.resolve_options_context);
-        let layer = module_asset_context.layer.clone();
+        let layer = module_asset_context.layer;
         let transition_options = self.process_transition_options(*module_asset_context.transitions);
         let module_asset_context = ModuleAssetContext::new(
             transition_options,

@@ -15,7 +15,7 @@ use turbopack_core::{
     context::AssetContext,
     environment::{Environment, ExecutionEnvironment, NodeJsEnvironment},
     file_source::FileSource,
-    ident::Layer,
+    new_layer,
     rebase::RebasedAsset,
     reference_type::ReferenceType,
 };
@@ -60,6 +60,8 @@ struct BenchInput {
     tests_root: String,
     input: String,
 }
+
+new_layer!(NODE_FILE_TRACE_LAYER, "node-file-trace");
 
 fn bench_emit(b: &mut Bencher, bench_input: &BenchInput) {
     let rt = tokio::runtime::Builder::new_current_thread()
@@ -112,7 +114,7 @@ fn bench_emit(b: &mut Bencher, bench_input: &BenchInput) {
                         ..Default::default()
                     }
                     .cell(),
-                    Layer::new(rcstr!("node_file_trace")),
+                    *NODE_FILE_TRACE_LAYER,
                 );
                 let module = module_asset_context
                     .process(Vc::upcast(source), ReferenceType::Undefined)

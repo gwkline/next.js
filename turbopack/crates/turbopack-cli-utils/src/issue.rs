@@ -11,7 +11,6 @@ use anyhow::Result;
 use crossterm::style::{StyledContent, Stylize};
 use owo_colors::{OwoColorize as _, Style};
 use rustc_hash::{FxHashMap, FxHashSet};
-use turbo_rcstr::RcStr;
 use turbo_tasks::{RawVc, TransientInstance, TransientValue, Vc};
 use turbo_tasks_fs::{FileLinesContent, source_context::get_source_context};
 use turbopack_core::issue::{
@@ -96,11 +95,8 @@ pub fn format_issue(
     let traces = &*plain_issue.import_traces;
     if !traces.is_empty() {
         /// Returns the leaf layer name, which is the first present layer name in the trace
-        fn leaf_layer_name(items: &[PlainTraceItem]) -> Option<RcStr> {
-            items
-                .iter()
-                .find(|t| t.layer.is_some())
-                .and_then(|t| t.layer.clone())
+        fn leaf_layer_name(items: &[PlainTraceItem]) -> Option<&'static str> {
+            items.iter().flat_map(|t| t.layer).next()
         }
         /// Returns whether or not all layers in the trace are identical
         /// If a layer is missing we ignore it in this analysis
@@ -138,7 +134,7 @@ pub fn format_issue(
                     out.push_str("./");
                 }
                 out.push_str(&item.path);
-                if let Some(ref label) = item.layer
+                if let Some(label) = item.layer
                     && print_layers
                 {
                     out.push_str(" [");
@@ -161,7 +157,7 @@ pub fn format_issue(
         let every_trace_has_a_distinct_root_layer = traces
             .iter()
             .filter_map(|t| leaf_layer_name(t))
-            .collect::<FxHashSet<RcStr>>()
+            .collect::<FxHashSet<_>>()
             .len()
             == traces.len();
         for (index, trace) in traces.iter().enumerate() {

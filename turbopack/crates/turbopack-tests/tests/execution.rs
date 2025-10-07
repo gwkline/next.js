@@ -38,11 +38,11 @@ use turbopack_core::{
     context::AssetContext,
     environment::{Environment, ExecutionEnvironment, NodeJsEnvironment},
     file_source::FileSource,
-    ident::Layer,
     issue::CollectibleIssuesExt,
     module_graph::{
         ModuleGraph, chunk_group_info::ChunkGroupEntry, export_usage::compute_export_usage_info,
     },
+    new_layer,
     reference_type::{InnerAssets, ReferenceType},
     resolve::{
         ExternalTraced, ExternalType,
@@ -316,6 +316,8 @@ async fn prepare_test(resource: RcStr) -> Result<Vc<PreparedTest>> {
     .cell())
 }
 
+new_layer!(TEST_LAYER, "test");
+
 #[turbo_tasks::function(operation)]
 async fn run_test_operation(prepared_test: ResolvedVc<PreparedTest>) -> Result<Vc<RunTestResult>> {
     let PreparedTest {
@@ -439,7 +441,7 @@ async fn run_test_operation(prepared_test: ResolvedVc<PreparedTest>) -> Result<V
             ..Default::default()
         }
         .cell(),
-        Layer::new(rcstr!("test")),
+        *TEST_LAYER,
     ));
 
     let jest_entry_source = FileSource::new(jest_entry_path);

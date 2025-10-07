@@ -20,8 +20,8 @@ use turbopack::evaluate_context::node_evaluate_asset_context;
 use turbopack_core::{
     asset::AssetContent,
     context::AssetContext,
-    ident::Layer,
     issue::{IssueExt, IssueSeverity, StyledString},
+    new_layer,
     reference_type::{InnerAssets, ReferenceType},
     resolve::{
         ResolveResult,
@@ -701,6 +701,8 @@ async fn fetch_from_google_fonts(
     })
 }
 
+new_layer!(NEXT_FONT_LAYER, "next_font");
+
 async fn get_mock_stylesheet(
     stylesheet_url: RcStr,
     mocked_responses_path: &str,
@@ -722,13 +724,8 @@ async fn get_mock_stylesheet(
         project_path: _,
         chunking_context,
     } = *execution_context.await?;
-    let asset_context = node_evaluate_asset_context(
-        execution_context,
-        None,
-        None,
-        Layer::new(rcstr!("next_font")),
-        false,
-    );
+    let asset_context =
+        node_evaluate_asset_context(execution_context, None, None, *NEXT_FONT_LAYER, false);
     let loader_path = mock_fs.root().await?.join("loader.js")?;
     let loader_source = Vc::upcast(VirtualSource::new(
         loader_path.clone(),

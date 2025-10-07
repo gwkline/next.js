@@ -18,7 +18,7 @@ use turbo_tasks_fs::{
 };
 use turbopack_core::{
     chunk::SourceMapsType,
-    ident::Layer,
+    new_layer,
     reference_type::{CssReferenceSubType, ReferenceType, UrlReferenceSubType},
     resolve::options::{ImportMap, ImportMapping},
 };
@@ -113,7 +113,7 @@ async fn rule_condition_from_webpack_condition(
             WebpackLoaderBuiltinConditionSetMatch::Matched => RuleCondition::True,
             WebpackLoaderBuiltinConditionSetMatch::Unmatched => RuleCondition::False,
             WebpackLoaderBuiltinConditionSetMatch::Invalid => {
-                // We don't expect the user to hit this because whatever deserializes the user
+                // We don't expect the user to hit this because whatever deserilizes the user
                 // configuration should validate conditions itself
                 anyhow::bail!("{name:?} is not a valid built-in condition")
             }
@@ -603,7 +603,7 @@ impl ModuleOptions {
                                         *execution_context,
                                         Some(import_map),
                                         None,
-                                        Layer::new(rcstr!("webpack_loaders")),
+                                        *WEBPACK_LOADERS_LAYER,
                                         false,
                                     ),
                                     *execution_context,
@@ -674,7 +674,7 @@ impl ModuleOptions {
                                     *execution_context,
                                     Some(import_map),
                                     None,
-                                    Layer::new(rcstr!("postcss")),
+                                    *POSTCSS_LAYER,
                                     true,
                                 ),
                                 *execution_context,
@@ -800,3 +800,6 @@ impl ModuleOptions {
         Ok(ModuleOptions::cell(ModuleOptions { rules }))
     }
 }
+
+new_layer!(POSTCSS_LAYER, "postcss");
+new_layer!(WEBPACK_LOADERS_LAYER, "webpack_loaders");

@@ -9617,6 +9617,7 @@ dependencies = [
  "data-encoding",
  "either",
  "indexmap 2.9.0",
+ "inventory",
  "once_cell",
  "patricia_tree",
  "petgraph 0.6.3",

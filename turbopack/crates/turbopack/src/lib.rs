@@ -39,6 +39,7 @@ use turbopack_core::{
     ident::Layer,
     issue::{IssueExt, IssueSource, module::ModuleIssue},
     module::Module,
+    new_layer,
     node_addon_module::NodeAddonModule,
     output::OutputAsset,
     raw_module::RawModule,
@@ -438,7 +439,7 @@ impl ModuleAssetContext {
             *this.compile_time_info,
             *this.module_options_context,
             resolve_options_context,
-            this.layer.clone(),
+            this.layer,
         ))
     }
 }
@@ -491,7 +492,7 @@ async fn process_default(
             "name",
             source.ident().await?.value_to_string().await?.as_str(),
         );
-        span.record("layer", module_asset_context.await?.layer.name().as_str());
+        span.record("layer", module_asset_context.await?.layer.name());
     }
 
     process_default_internal(
@@ -766,9 +767,11 @@ pub async fn externals_tracing_module_context(
         }
         .cell(),
         resolve_options.cell(),
-        Layer::new(rcstr!("externals-tracing")),
+        *EXTERNALS_TRACING_LAYER,
     ))
 }
+
+new_layer!(EXTERNALS_TRACING_LAYER, "externals-tracing");
 
 #[turbo_tasks::value_impl]
 impl AssetContext for ModuleAssetContext {
@@ -778,7 +781,7 @@ impl AssetContext for ModuleAssetContext {
     }
 
     fn layer(&self) -> Layer {
-        self.layer.clone()
+        self.layer
     }
 
     #[turbo_tasks::function]
@@ -935,7 +938,7 @@ impl AssetContext for ModuleAssetContext {
                     *self.compile_time_info,
                     *self.module_options_context,
                     *self.resolve_options_context,
-                    self.layer.clone(),
+                    self.layer,
                     *transition,
                 ))
             } else {
@@ -945,7 +948,7 @@ impl AssetContext for ModuleAssetContext {
                     *self.compile_time_info,
                     *self.module_options_context,
                     *self.resolve_options_context,
-                    self.layer.clone(),
+                    self.layer,
                 ))
             },
         )

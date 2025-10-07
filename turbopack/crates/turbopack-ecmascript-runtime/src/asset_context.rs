@@ -1,12 +1,10 @@
-use turbo_rcstr::rcstr;
 use turbo_tasks::{ResolvedVc, Result, Vc};
 use turbopack::{
     ModuleAssetContext,
     module_options::{EcmascriptOptionsContext, ModuleOptionsContext, TypescriptTransformOptions},
 };
 use turbopack_core::{
-    compile_time_info::CompileTimeInfo, context::AssetContext, environment::Environment,
-    ident::Layer,
+    compile_time_info::CompileTimeInfo, context::AssetContext, environment::Environment, new_layer,
 };
 use turbopack_ecmascript::TreeShakingMode;
 
@@ -37,8 +35,10 @@ pub async fn get_runtime_asset_context(
         compile_time_info,
         module_options_context,
         Vc::default(),
-        Layer::new(rcstr!("runtime")),
+        *RUNTIME_LAYER,
     ));
 
     Ok(asset_context)
 }
+
+new_layer!(RUNTIME_LAYER, "runtime");

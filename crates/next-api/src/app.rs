@@ -56,12 +56,13 @@ use turbopack_core::{
         availability_info::AvailabilityInfo,
     },
     file_source::FileSource,
-    ident::{AssetIdent, Layer},
+    ident::AssetIdent,
     module::Module,
     module_graph::{
         GraphEntries, ModuleGraph, SingleModuleGraph, VisitedModules,
         chunk_group_info::{ChunkGroup, ChunkGroupEntry},
     },
+    new_layer,
     output::{OutputAsset, OutputAssets, OutputAssetsWithReferenced},
     raw_output::RawOutput,
     reference_type::{CommonJsReferenceSubType, CssReferenceSubType, ReferenceType},
@@ -102,6 +103,21 @@ impl AppProject {
         rcstr!("next-ecmascript-client-reference")
     }
 }
+
+new_layer!(APP_RSC_LAYER, "app-rsc", "Server Component");
+new_layer!(APP_EDGE_RSC_LAYER, "app-edge-rsc", "Edge Server Component");
+new_layer!(APP_ROUTE_LAYER, "app-route", "App Route");
+new_layer!(APP_EDGE_ROUTE_LAYER, "app-edge-route", "Edge App Route");
+new_layer!(APP_CLIENT_LAYER, "app-client", "Client Component Browser");
+new_layer!(APP_SSR_LAYER, "app-ssr", "Client Component SSR");
+new_layer!(
+    APP_EDGE_SSR_LAYER,
+    "app-edge-ssr",
+    "Client Component SSR - Edge"
+);
+
+new_layer!(APP_SHARED_LAYER, "app-shared");
+new_layer!(APP_EDGE_SHARED_LAYER, "app-edge-shared");
 
 #[turbo_tasks::value_impl]
 impl AppProject {
@@ -420,7 +436,7 @@ impl AppProject {
             self.project().server_compile_time_info(),
             self.rsc_module_options_context(),
             self.rsc_resolve_options_context(),
-            Layer::new_with_user_friendly_name(rcstr!("app-rsc"), rcstr!("Server Component")),
+            *APP_RSC_LAYER,
         ))
     }
 
@@ -435,10 +451,7 @@ impl AppProject {
             self.project().edge_compile_time_info(),
             self.edge_rsc_module_options_context(),
             self.edge_rsc_resolve_options_context(),
-            Layer::new_with_user_friendly_name(
-                rcstr!("app-edge-rsc"),
-                rcstr!("Edge Server Component"),
-            ),
+            *APP_EDGE_RSC_LAYER,
         ))
     }
 
@@ -489,7 +502,7 @@ impl AppProject {
             self.project().server_compile_time_info(),
             self.route_module_options_context(),
             self.route_resolve_options_context(),
-            Layer::new_with_user_friendly_name(rcstr!("app-route"), rcstr!("App Route")),
+            *APP_ROUTE_LAYER,
         ))
     }
 
@@ -539,7 +552,7 @@ impl AppProject {
             self.project().edge_compile_time_info(),
             self.edge_route_module_options_context(),
             self.edge_route_resolve_options_context(),
-            Layer::new_with_user_friendly_name(rcstr!("app-edge-route"), rcstr!("Edge App Route")),
+            *APP_EDGE_ROUTE_LAYER,
         ))
     }
 
@@ -566,10 +579,7 @@ impl AppProject {
             self.project().client_compile_time_info(),
             self.client_module_options_context(),
             self.client_resolve_options_context(),
-            Layer::new_with_user_friendly_name(
-                rcstr!("app-client"),
-                rcstr!("Client Component Browser"),
-            ),
+            *APP_CLIENT_LAYER,
         ))
     }
 
@@ -670,7 +680,7 @@ impl AppProject {
             self.project().server_compile_time_info(),
             self.ssr_module_options_context(),
             self.ssr_resolve_options_context(),
-            Layer::new_with_user_friendly_name(rcstr!("app-ssr"), rcstr!("Client Component SSR")),
+            *APP_SSR_LAYER,
         ))
     }
 
@@ -690,7 +700,7 @@ impl AppProject {
             self.project().server_compile_time_info(),
             self.ssr_module_options_context(),
             self.ssr_resolve_options_context(),
-            Layer::new(rcstr!("app-shared")),
+            *APP_SHARED_LAYER,
         ))
     }
 
@@ -742,10 +752,7 @@ impl AppProject {
             self.project().edge_compile_time_info(),
             self.edge_ssr_module_options_context(),
             self.edge_ssr_resolve_options_context(),
-            Layer::new_with_user_friendly_name(
-                rcstr!("app-edge-ssr"),
-                rcstr!("Client Component SSR - Edge"),
-            ),
+            *APP_EDGE_SSR_LAYER,
         ))
     }
 
@@ -765,7 +772,7 @@ impl AppProject {
             self.project().edge_compile_time_info(),
             self.edge_ssr_module_options_context(),
             self.edge_ssr_resolve_options_context(),
-            Layer::new(rcstr!("app-edge-shared")),
+            *APP_EDGE_SHARED_LAYER,
         ))
     }
 

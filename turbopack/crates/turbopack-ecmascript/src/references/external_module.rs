@@ -8,7 +8,7 @@ use turbo_tasks_fs::{FileContent, FileSystem, VirtualFileSystem, glob::Glob, rop
 use turbopack_core::{
     asset::{Asset, AssetContent},
     chunk::{AsyncModuleInfo, ChunkItem, ChunkType, ChunkableModule, ChunkingContext},
-    ident::{AssetIdent, Layer},
+    ident::{AssetIdent, new_layer},
     module::Module,
     module_graph::ModuleGraph,
     raw_module::RawModule,
@@ -212,13 +212,15 @@ impl CachedExternalModule {
     }
 }
 
+new_layer!(EXTERNAL_LAYER, "external");
+
 #[turbo_tasks::value_impl]
 impl Module for CachedExternalModule {
     #[turbo_tasks::function]
     async fn ident(&self) -> Result<Vc<AssetIdent>> {
         let fs = VirtualFileSystem::new_with_name(rcstr!("externals"));
         let mut ident = AssetIdent::from_path(fs.root().await?.join(&self.request)?);
-        ident.layer = Some(Layer::new(rcstr!("external")));
+        ident.layer = Some(*EXTERNAL_LAYER);
         ident.add_modifier(self.request.clone());
         ident.add_modifier(self.external_type.to_string().into());
         Ok(ident.cell())

@@ -26,8 +26,8 @@ use turbopack_core::{
     context::AssetContext,
     environment::{Environment, ExecutionEnvironment, NodeJsEnvironment},
     file_source::FileSource,
-    ident::Layer,
     module::Module,
+    new_layer,
     output::OutputAsset,
     reference::all_assets_from_entries,
     reference_type::ReferenceType,
@@ -177,6 +177,8 @@ fn unit_test(#[case] input: &str) -> Result<()> {
     node_file_trace(input)
 }
 
+new_layer!(TEST_LAYER, "test");
+
 #[turbo_tasks::function(operation)]
 async fn node_file_trace_operation(package_root: RcStr, input: RcStr) -> Result<Vc<Vec<RcStr>>> {
     let workspace_fs: Vc<Box<dyn FileSystem>> = Vc::upcast(DiskFileSystem::new(
@@ -226,7 +228,7 @@ async fn node_file_trace_operation(package_root: RcStr, input: RcStr) -> Result<
             ..Default::default()
         }
         .cell(),
-        Layer::new(rcstr!("test")),
+        *TEST_LAYER,
     );
 
     let module = module_asset_context
