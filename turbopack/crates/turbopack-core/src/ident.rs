@@ -5,7 +5,7 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use turbo_rcstr::RcStr;
-use turbo_tasks::{NonLocalValue, TaskInput, Vc, trace::TraceRawVcs};
+use turbo_tasks::{NonLocalValue, TaskInput, TryJoinIterExt, Vc, trace::TraceRawVcs};
 use turbo_tasks_fs::FileSystemPath;
 use turbo_tasks_hash::{DeterministicHash, Xxh3Hash64Hasher, encode_hex, hash_xxh3_hash64};
 
@@ -171,12 +171,9 @@ impl AssetIdent {
         if !assets.is_empty() {
             assets.push_str(", ");
         }
-        write!(
-            assets,
-            " {key} => {asset}",
-            asset = asset.value_to_string().await?
-        )
-        .expect("failed to write to assets");
+        assets.push_str(&key);
+        assets.push_str(" => ");
+        assets.push_str(&asset.value_to_string().await?);
 
         self.assets = RcStr::from(assets);
         Ok(())
@@ -184,17 +181,25 @@ impl AssetIdent {
     pub async fn add_assets(&mut self, items: Vec<(RcStr, Vc<AssetIdent>)>) -> Result<()> {
         debug_assert!(!items.is_empty(), "assets cannot be empty.");
         let mut assets = take(&mut self.assets).into_owned();
-        for (key, asset) in items {
+
+        // Execute all asset string conversions concurrently
+        let asset_strings = items
+            .into_iter()
+            .map(|(key, asset)| async move {
+                let asset_string = asset.await?.value_to_string().await?;
+                Ok(format!("{key} => {asset_string}"))
+            })
+            .try_join()
+            .await?;
+
+        // Build the final assets string
+        for asset_string in asset_strings {
             if !assets.is_empty() {
                 assets.push_str(", ");
             }
-            write!(
-                assets,
-                " {key} => {asset}",
-                asset = asset.await?.value_to_string().await?
-            )
-            .expect("failed to write to assets");
+            assets.push_str(&asset_string);
         }
+
         self.assets = RcStr::from(assets);
         Ok(())
     }
@@ -259,7 +264,7 @@ impl AssetIdent {
     /// both are using the same name generation logic.
     pub async fn output_name(
         &self,
-        context_path: FileSystemPath,
+        context_path: &FileSystemPath,
         prefix: Option<RcStr>,
         expected_extension: RcStr,
     ) -> Result<String> {
@@ -322,18 +327,14 @@ impl AssetIdent {
             assets.deterministic_hash(&mut hasher);
             has_hash = true;
         }
-        if !modifiers.is_empty() {
-            // TODO: document why it is important to strip the default modifier from the hash
-            for modifier in modifiers.split(", ") {
-                if let Some(default_modifier) = default_modifier
-                    && modifier == default_modifier
-                {
-                    continue;
-                }
-                3_u8.deterministic_hash(&mut hasher);
-                modifier.deterministic_hash(&mut hasher);
-                has_hash = true;
-            }
+        // If the only modifier is the default modifier, we don't need to hash it
+        if !modifiers.is_empty()
+            && let Some(default_modifier) = default_modifier
+            && modifiers != default_modifier
+        {
+            3_u8.deterministic_hash(&mut hasher);
+            modifiers.deterministic_hash(&mut hasher);
+            has_hash = true;
         }
         if !parts.is_empty() {
             4_u8.deterministic_hash(&mut hasher);

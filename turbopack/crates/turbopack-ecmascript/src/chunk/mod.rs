@@ -93,20 +93,12 @@ impl Chunk for EcmascriptChunk {
             }
         }
 
-        let mut ident = AssetIdent {
-            path: if let Some(common_path) = common_path {
-                common_path
-            } else {
-                ServerFileSystem::new().root().owned().await?
-            },
-            query: RcStr::default(),
-            fragment: RcStr::default(),
-            assets: RcStr::default(),
-            modifiers: RcStr::default(),
-            parts: RcStr::default(),
-            layer: None,
-            content_type: None,
-        };
+        let mut ident = AssetIdent::from_path(if let Some(common_path) = common_path {
+            common_path
+        } else {
+            ServerFileSystem::new().root().owned().await?
+        });
+
         ident
             .add_assets(
                 chunk_items

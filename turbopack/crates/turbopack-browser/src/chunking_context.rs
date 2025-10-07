@@ -465,11 +465,7 @@ impl ChunkingContext for BrowserChunkingContext {
             root_path,
         } = &*self.chunk_path_info().await?;
         let name = match *content_hashing {
-            None => {
-                ident
-                    .output_name(root_path.clone(), prefix, extension)
-                    .await?
-            }
+            None => ident.output_name(root_path, prefix, extension).await?,
             Some(ContentHashing::Direct { length }) => {
                 let Some(asset) = asset else {
                     bail!("chunk_path requires an asset when content hashing is enabled");

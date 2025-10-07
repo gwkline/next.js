@@ -155,8 +155,7 @@ impl CssChunk {
     async fn ident_for_path(&self) -> Result<Vc<AssetIdent>> {
         let CssChunkContent { chunk_items, .. } = &*self.content.await?;
         let mut common_path = if let Some(chunk_item) = chunk_items.first() {
-            let path = chunk_item.asset_ident().path().await?;
-            Some((path.clone(), path))
+            Some(chunk_item.asset_ident().path().await?)
         } else {
             None
         };
@@ -164,34 +163,24 @@ impl CssChunk {
         // The included chunk items and the availability info describe the chunk
         // uniquely
         for &chunk_item in chunk_items.iter() {
-            if let Some((common_path_vc, common_path_ref)) = common_path.as_mut() {
+            if let Some(common_path_ref) = common_path.as_mut() {
                 let path = chunk_item.asset_ident().path().await?;
                 while !path.is_inside_or_equal_ref(common_path_ref) {
-                    let parent = common_path_vc.parent();
-                    if parent == *common_path_vc {
+                    let parent = common_path_ref.parent();
+                    if parent == *common_path_ref {
                         common_path = None;
                         break;
                     }
-                    *common_path_vc = parent;
-                    *common_path_ref = common_path_vc.clone();
+                    *common_path_ref = parent;
                 }
             }
         }
 
-        let mut ident = AssetIdent {
-            path: if let Some((common_path, _)) = common_path {
-                common_path
-            } else {
-                ServerFileSystem::new().root().owned().await?
-            },
-            query: RcStr::default(),
-            fragment: RcStr::default(),
-            assets: RcStr::default(),
-            modifiers: RcStr::default(),
-            parts: RcStr::default(),
-            layer: None,
-            content_type: None,
-        };
+        let mut ident = AssetIdent::from_path(if let Some(common_path) = common_path {
+            common_path
+        } else {
+            ServerFileSystem::new().root().owned().await?
+        });
         ident
             .add_assets(
                 chunk_items

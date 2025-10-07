@@ -329,7 +329,7 @@ impl ChunkingContext for NodeJsChunkingContext {
     ) -> Result<Vc<FileSystemPath>> {
         let root_path = self.chunk_root_path.clone();
         let name = ident
-            .output_name(self.root_path.clone(), prefix, extension)
+            .output_name(&self.root_path, prefix, extension)
             .await?;
         Ok(root_path.join(&name)?.cell())
     }
