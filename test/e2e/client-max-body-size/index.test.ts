@@ -69,7 +69,7 @@ describe('client-max-body-size', () => {
       files: __dirname,
       nextConfig: {
         experimental: {
-          clientMaxBodySize: '5mb',
+          middlewareClientMaxBodySize: '5mb',
         },
       },
     })
@@ -117,7 +117,7 @@ describe('client-max-body-size', () => {
       files: __dirname,
       nextConfig: {
         experimental: {
-          clientMaxBodySize: 2 * 1024 * 1024, // 2MB in bytes
+          middlewareClientMaxBodySize: 2 * 1024 * 1024, // 2MB in bytes
         },
       },
     })
@@ -165,7 +165,7 @@ describe('client-max-body-size', () => {
       files: __dirname,
       nextConfig: {
         experimental: {
-          clientMaxBodySize: '50mb',
+          middlewareClientMaxBodySize: '50mb',
         },
       },
     })
